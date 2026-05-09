@@ -20,6 +20,9 @@ spec:
         prometheus.io/path: "/actuator/prometheus"
     spec:
       automountServiceAccountToken: false
+      # ── Graceful shutdown 예산 (ADR-0011) ──
+      # preStop 5s (endpoint 전파 대기) + lifecycle 25s = 30s. K8s default 30s 와 일치.
+      terminationGracePeriodSeconds: 30
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -43,18 +46,39 @@ spec:
             limits:
               cpu: "1500m"
               memory: "1.5Gi"
+          # ── 3종 probe (ADR-0010) ──
+          # startupProbe : 부팅 (Flyway + ES mapping init) 시간 보호. 성공할 때까지 다른 probe
+          #   호출 안 됨. failureThreshold 30 * periodSeconds 5 = 150s 까지 부팅 허용.
+          # readinessProbe : ApplicationReadinessCoordinator 가 ES ping 을 sampling 하여
+          #   readiness state 갱신. ES DOWN 시 traffic 즉시 차단.
+          # livenessProbe : Spring Boot livenessState — 회복 불가 상태 (deadlock / OOM 직전)
+          #   에서만 DOWN. ES 일시 불가는 liveness 에 영향 없음 (재시작해도 못 고침).
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            failureThreshold: 30
+            periodSeconds: 5
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
               port: http
-            initialDelaySeconds: 15
             periodSeconds: 5
+            failureThreshold: 3
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: http
-            initialDelaySeconds: 60
             periodSeconds: 10
+            failureThreshold: 3
+          # ── preStop : 5s 대기 후 SIGTERM ──
+          # endpoint 갱신이 kube-proxy 까지 전파되기까지 보통 ~5s. 그 사이에 들어온
+          # in-flight 요청을 새 connection 거부 없이 처리. 이후 Spring graceful shutdown 이
+          # 25s 안에 in-flight drain.
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
