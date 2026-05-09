@@ -13,3 +13,4 @@
 | [ADR-0006](0006-boost-rule-relevance.md) | boost rule + relevance tuning — function_score, click-through rate |
 | [ADR-0007](0007-autocomplete-edge-ngram-vs-completion.md) | 자동완성 — edge_ngram vs completion suggester |
 | [ADR-0008](0008-facet-cardinality-memory-protection.md) | facet aggregation 의 cardinality 제한 + 메모리 보호 |
+| [ADR-0009](0009-hikari-pool-tuning.md) | HikariCP 명시 튜닝 + connection leak detection |

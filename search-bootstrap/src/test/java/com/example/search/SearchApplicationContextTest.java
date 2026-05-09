@@ -11,7 +11,7 @@ import org.springframework.test.context.TestPropertySource;
  * <p>실패 시 빈 의존 그래프 / properties 매핑 / Flyway 마이그레이션 중 하나가 깨졌다는 신호.</p>
  */
 @SpringBootTest
-@ActiveProfiles("memory-search")
+@ActiveProfiles({"memory-search", "test"})
 @TestPropertySource(properties = {
         "search.engine=memory"
 })
