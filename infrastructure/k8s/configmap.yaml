@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: search-config
+  namespace: search-service
+data:
+  SPRING_PROFILES_ACTIVE: "prod"
+  SEARCH_ENGINE: "elasticsearch"
+  SEARCH_KAFKA_ENABLED: "true"
+  ELASTICSEARCH_HOST: "elasticsearch.data:9200"
+  KAFKA_BOOTSTRAP: "kafka.data:9092"
