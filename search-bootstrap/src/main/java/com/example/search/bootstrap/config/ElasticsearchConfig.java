@@ -8,11 +8,14 @@ import com.example.search.adapter.out.elasticsearch.ElasticsearchIndexWriterAdap
 import com.example.search.adapter.out.elasticsearch.ElasticsearchSearchEngineAdapter;
 import com.example.search.adapter.out.elasticsearch.IndexMappingResource;
 import com.example.search.adapter.out.elasticsearch.InMemorySearchEngineAdapter;
+import com.example.search.adapter.out.elasticsearch.ResilientSearchClient;
 import com.example.search.application.port.out.IndexWriterPort;
 import com.example.search.application.port.out.SearchEnginePort;
 import com.example.search.application.port.out.SearchIndexProperties;
 import com.example.search.bootstrap.health.SearchEngineHealthIndicator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.retry.RetryRegistry;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -52,8 +55,15 @@ public class ElasticsearchConfig {
 
     @Bean
     @ConditionalOnProperty(name = "search.engine", havingValue = "elasticsearch", matchIfMissing = true)
-    public SearchEnginePort esSearchEngine(ElasticsearchClient client, SearchIndexProperties props) {
-        return new ElasticsearchSearchEngineAdapter(client, props);
+    public SearchEnginePort esSearchEngine(ElasticsearchClient client, SearchIndexProperties props,
+                                           RetryRegistry retryRegistry,
+                                           CircuitBreakerRegistry cbRegistry) {
+        // raw 어댑터 + Resilience4j Retry → CB chain (ADR-0012). instance 이름은 "elasticsearch".
+        ElasticsearchSearchEngineAdapter raw = new ElasticsearchSearchEngineAdapter(client, props);
+        return new ResilientSearchClient(
+                raw,
+                retryRegistry.retry("elasticsearch"),
+                cbRegistry.circuitBreaker("elasticsearch"));
     }
 
     @Bean
