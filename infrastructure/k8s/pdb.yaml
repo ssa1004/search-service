@@ -1,0 +1,10 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: search-service
+  namespace: search-service
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: search-service
