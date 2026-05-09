@@ -20,3 +20,6 @@
 | [ADR-0013](0013-cdc-consumer-dlq.md) | CDC consumer DLQ (DefaultErrorHandler + DLT) + manual replay |
 | [ADR-0014](0014-outbox-retention.md) | Outbox retention 정리 스케줄 + ShedLock 멀티 인스턴스 보호 |
 | [ADR-0015](0015-nori-korean-analyzer.md) | nori 한국어 형태소 analyzer + user_dictionary |
+| [ADR-0016](0016-saved-search-and-alerts.md) | 저장 검색 (Saved Search) + 신규 매치 알림 |
+| [ADR-0017](0017-synonym-graph-and-runtime-reload.md) | 운영자 동의어 사전 + ES synonym graph 런타임 reload |
+| [ADR-0018](0018-query-analytics.md) | 검색 query analytics — Top / Zero-result / Latency / CTR |
