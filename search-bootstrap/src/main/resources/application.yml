@@ -15,6 +15,29 @@ spring:
     username: sa
     password:
     driver-class-name: org.h2.Driver
+    # ── HikariCP 명시 튜닝 (ADR-0009) ───────────────────────────────────────
+    # default 값 (max=10, leak detection off) 은 운영 부하 / 누수 디버깅에 부족.
+    # 산정 근거:
+    #  - maximum-pool-size=16 : virtual thread + JPA 기준, pod 1대당 동시 transaction 16
+    #    수준이면 충분 (Postgres 측 max_connections 100 가정 시 6 pod * 16 = 96).
+    #  - minimum-idle=4 : trough 시간에도 4개는 미리 살려둔다 — burst 시 cold connection
+    #    오버헤드 회피.
+    #  - connection-timeout=3s : 풀 고갈 시 caller 가 빨리 fail 하도록 (검색 latency 보호).
+    #  - max-lifetime=29분 : Postgres / pgbouncer / cloud-NAT idle timeout (보통 30분) 보다
+    #    1분 짧게 — 서버측 close 와 race 회피.
+    #  - keepalive-time=10분 : idle connection 의 NAT/firewall idle drop 방지 (max-lifetime
+    #    의 절반 미만이어야 효과).
+    #  - leak-detection-threshold=30s : 30초 이상 보유한 connection 은 stack trace 와 함께
+    #    경고 — close() 누락 / long-running transaction 디버깅 용도.
+    hikari:
+      maximum-pool-size: 16
+      minimum-idle: 4
+      connection-timeout: 3000
+      max-lifetime: 1740000        # 29분
+      keepalive-time: 600000       # 10분
+      idle-timeout: 600000         # 10분
+      leak-detection-threshold: 30000
+      pool-name: SearchHikariPool
   jpa:
     hibernate:
       ddl-auto: validate
