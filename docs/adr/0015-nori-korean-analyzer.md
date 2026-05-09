@@ -4,9 +4,9 @@
 적용
 
 ## 배경
-검색 도메인은 한정판 sneaker — 사용자 검색어가 대부분 한국어 ("에어 조던 1 시카고", "덩크
-로우 파나마") 또는 한영 혼합. 기존 `ko_standard` 는 이름만 한국어였고 실체는 `standard`
-tokenizer + lowercase + asciifolding — 영어 기준 분리.
+대상 도메인의 검색어가 대부분 한국어 ("에어 조던 1 시카고", "덩크로우 파나마") 또는 한영
+혼합이다. 기존 `ko_standard` 는 이름만 한국어였고 실체는 `standard` tokenizer + lowercase
++ asciifolding — 영어 기준 분리.
 
 문제 사례:
 - "에어 조던 1 시카고" 검색 시 standard tokenizer 가 공백으로만 자르므로 "조던1" 처럼 띄어
@@ -31,7 +31,7 @@ ko_standard:
 
 - `decompound_mode=mixed` — 복합어를 분해 후 원형까지 같이 색인 ("덩크로우" → "덩크로우"+"덩크"+"로우").
 - `nori_part_of_speech` 의 default stoptag (조사 / 어미 등) 로 의미 없는 토큰 제거.
-- `nori_readingform` — 한자 표기가 들어와도 한글로 통일 (sneaker 도메인엔 거의 없지만 defensive).
+- `nori_readingform` — 한자 표기가 들어와도 한글로 통일 (현재 도메인엔 거의 없지만 defensive).
 
 ### user_dictionary
 브랜드 / 모델명을 단일 토큰으로 보존 — 분해되면 의미 흐릿:
