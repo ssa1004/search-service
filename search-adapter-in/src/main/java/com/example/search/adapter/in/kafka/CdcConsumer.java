@@ -8,6 +8,7 @@ import com.example.search.domain.product.ProductId;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
@@ -30,6 +31,7 @@ import java.time.Instant;
  * 이므로 중복 수신은 결과 같음 (ES external version 비교).</p>
  */
 @Component
+@ConditionalOnProperty(name = "search.kafka.enabled", havingValue = "true")
 @RequiredArgsConstructor
 @Slf4j
 public class CdcConsumer {

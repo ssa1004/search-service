@@ -15,7 +15,6 @@ import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -33,7 +32,6 @@ import java.util.List;
  *   <li>{@link #swapAlias} — atomic alias actions (remove + add 한 번에).</li>
  * </ul>
  */
-@Component
 @RequiredArgsConstructor
 @Slf4j
 public class ElasticsearchIndexWriterAdapter implements IndexWriterPort {
