@@ -96,27 +96,29 @@ search:
   # default: "elasticsearch".
   engine: ${SEARCH_ENGINE:elasticsearch}
 
-# ── Resilience4j: ES 호출 보호 ─────────────────────────────────────────────
+# ── Resilience4j: ES 호출 보호 (ADR-0012) ─────────────────────────────────
+# 검색은 latency 민감 → wait 짧게 (100ms) + exp 2.0 + jitter 0.5.
+# CB 는 50% failure 에서 OPEN, 30s 후 half-open 5 calls 로 회복 시도.
 resilience4j:
   circuitbreaker:
     instances:
-      elasticsearch-search:
+      elasticsearch:
+        slidingWindowType: COUNT_BASED
         slidingWindowSize: 50
+        minimumNumberOfCalls: 20
         failureRateThreshold: 50
-        waitDurationInOpenState: 10s
+        waitDurationInOpenState: 30s
         permittedNumberOfCallsInHalfOpenState: 5
-      elasticsearch-index:
-        slidingWindowSize: 50
-        failureRateThreshold: 50
-        waitDurationInOpenState: 10s
+        automaticTransitionFromOpenToHalfOpenEnabled: true
   retry:
     instances:
-      elasticsearch-search:
+      elasticsearch:
         maxAttempts: 3
-        waitDuration: 200ms
-      elasticsearch-index:
-        maxAttempts: 3
-        waitDuration: 200ms
+        waitDuration: 100ms
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2.0
+        enableRandomizedWait: true
+        randomizedWaitFactor: 0.5
 
 # ── Actuator / metrics ─────────────────────────────────────────────────────
 management:

@@ -27,8 +27,6 @@ import com.example.search.domain.query.SearchResult;
 import com.example.search.domain.query.SortSpec;
 import com.example.search.domain.suggest.AutocompleteSuggestion;
 import com.example.search.domain.suggest.RelatedSuggestion;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
-import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -50,20 +48,17 @@ import java.util.UUID;
  *   <li>facet → terms / range aggregation</li>
  * </ul>
  *
- * <p>Resilience4j CB + Retry — ES 일시 장애 시 즉시 회로 차단으로 caller 보호.</p>
+ * <p>Resilience4j CB + Retry 는 {@link ResilientSearchClient} 가 외부에서 wrap 한다 (ADR-0012)
+ * — 본 어댑터는 raw ES 호출만 책임.</p>
  */
 @RequiredArgsConstructor
 @Slf4j
 public class ElasticsearchSearchEngineAdapter implements SearchEnginePort {
 
-    private static final String CB_NAME = "elasticsearch-search";
-
     private final ElasticsearchClient client;
     private final SearchIndexProperties properties;
 
     @Override
-    @CircuitBreaker(name = CB_NAME)
-    @Retry(name = CB_NAME)
     public SearchResult search(SearchProductCommand command) {
         SearchQuery sq = command.query();
         Query baseQuery = buildBaseQuery(sq);
@@ -88,8 +83,6 @@ public class ElasticsearchSearchEngineAdapter implements SearchEnginePort {
     }
 
     @Override
-    @CircuitBreaker(name = CB_NAME)
-    @Retry(name = CB_NAME)
     public List<AutocompleteSuggestion> autocomplete(String prefix, int limit) {
         // edge_ngram analyzer 가 indexing 시점에 prefix 토큰을 만들어 둠 — query 시점은 standard
         // analyzer 로 매칭. 자동완성에 boost (인기도) 도 함께 적용.
@@ -117,8 +110,6 @@ public class ElasticsearchSearchEngineAdapter implements SearchEnginePort {
     }
 
     @Override
-    @CircuitBreaker(name = CB_NAME)
-    @Retry(name = CB_NAME)
     public List<RelatedSuggestion> findRelatedKeywords(String keyword, int limit, int maxDistance) {
         // fuzzy match — 편집 거리 maxDistance 이내. 인기도 (clickCount) 로 정렬해 가장 가까운 인기
         // 키워드를 반환.
