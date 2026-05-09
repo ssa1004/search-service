@@ -24,6 +24,10 @@ dependencies {
     // Resilience4j — ES 호출 보호 (CB + Retry + Bulkhead).
     implementation("io.github.resilience4j:resilience4j-spring-boot3:2.2.0")
 
+    // ShedLock — 멀티 인스턴스에서 @Scheduled 중복 실행 방지 (outbox retention 등).
+    // OutboxRetentionJob 이 @SchedulerLock 어노테이션을 사용하므로 api 로 노출.
+    api("net.javacrumbs.shedlock:shedlock-spring:5.16.0")
+
     // Messaging — Kafka producer / consumer.
     implementation("org.springframework.kafka:spring-kafka")
 
@@ -31,6 +35,7 @@ dependencies {
     implementation("io.micrometer:micrometer-tracing")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.mockito:mockito-junit-jupiter")
     testImplementation("org.springframework.kafka:spring-kafka-test")
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.testcontainers:junit-jupiter")
