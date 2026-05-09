@@ -24,6 +24,10 @@ dependencies {
     // Resilience4j — 빈 customizer (CB / Retry / Bulkhead).
     implementation("io.github.resilience4j:resilience4j-spring-boot3:2.2.0")
 
+    // ShedLock — bootstrap 에서 LockProvider 빈 등록.
+    implementation("net.javacrumbs.shedlock:shedlock-spring:5.16.0")
+    implementation("net.javacrumbs.shedlock:shedlock-provider-jdbc-template:5.16.0")
+
     // Kafka — KafkaConfig 가 ConsumerFactory / ContainerFactory 빈을 직접 정의.
     implementation("org.springframework.kafka:spring-kafka")
 
