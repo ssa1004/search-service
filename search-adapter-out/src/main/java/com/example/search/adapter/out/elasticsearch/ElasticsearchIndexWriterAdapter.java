@@ -36,7 +36,9 @@ import java.util.List;
 @Slf4j
 public class ElasticsearchIndexWriterAdapter implements IndexWriterPort {
 
-    private static final String CB_NAME = "elasticsearch-index";
+    // ResilientSearchClient 와 같은 instance config 공유. write 의 retry 정책은 별도화 검토 가치
+    // (idempotency 보장 후에만 retry) — ADR-0012 의 "다시 검토할 시점" 참고.
+    private static final String CB_NAME = "elasticsearch";
 
     private final ElasticsearchClient client;
     private final SearchIndexProperties properties;
