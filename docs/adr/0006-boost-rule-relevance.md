@@ -19,8 +19,8 @@
    증가 (선형 가중은 인기 상품이 너무 압도해 다양성 손실).
 
 2. **신상품 — `gauss decay`**: 출시일 origin 기준 반감기 (`freshnessHalfLife`) 만큼
-   지나면 0.5, 두 배 지나면 0.25. 운영 default 30일 — 한정판 sneaker 도메인은 발매 직후
-   1-2주 가 핵심 트래픽.
+   지나면 0.5, 두 배 지나면 0.25. 운영 default 30일 — 한정판 / 신상품 위주 commerce
+   도메인은 발매 직후 1-2주 가 핵심 트래픽이라는 가정.
 
 `BoostRule` 도메인 객체가 weight / 반감기의 sane range 를 강제 (`popularityWeight ≤ 10`,
 `freshnessHalfLife ∈ 1d..365d`) — 누군가 weight=10000 을 넣어 점수를 망가뜨리는 사고

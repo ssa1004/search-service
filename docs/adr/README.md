@@ -1,7 +1,7 @@
 # Architecture Decision Records (ADR)
 
-본 디렉토리는 search-service 의 핵심 설계 결정과 그 근거를 담는다. 각 ADR 은 5년차 개발자가
-30초 안에 결정과 trade-off 를 잡을 수 있도록 작성한다.
+본 디렉토리는 search-service 의 핵심 설계 결정과 그 근거를 담는다. 각 ADR 은 짧게 읽고도
+결정과 장단점을 파악할 수 있도록 작성한다.
 
 | 번호 | 제목 |
 |------|------|

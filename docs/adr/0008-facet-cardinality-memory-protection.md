@@ -11,7 +11,7 @@ naive 한 사용은 운영에서 ES 노드를 죽인다.
 - `terms aggregation` 에 `size: 1000000` 을 넣어 모든 브랜드 분포를 한 번에 받으려 한다 →
   ES 가 1M bucket 메모리 할당 후 응답.
 - 사용자가 입력한 facet 필드명을 그대로 받아 `text` 필드에 aggregation → fielddata 로
-  inverted index 가 메모리에 로드되어 노드 폭발.
+  inverted index 가 메모리에 로드되어 노드 OOM.
 - 한 검색 요청에 facet 10개를 동시 요청 → 각 aggregation 의 비용이 합산되어 응답
   지연.
 
