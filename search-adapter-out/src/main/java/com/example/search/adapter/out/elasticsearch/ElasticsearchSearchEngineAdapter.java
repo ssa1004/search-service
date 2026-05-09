@@ -31,7 +31,6 @@ import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -53,7 +52,6 @@ import java.util.UUID;
  *
  * <p>Resilience4j CB + Retry — ES 일시 장애 시 즉시 회로 차단으로 caller 보호.</p>
  */
-@Component
 @RequiredArgsConstructor
 @Slf4j
 public class ElasticsearchSearchEngineAdapter implements SearchEnginePort {

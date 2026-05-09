@@ -1,0 +1,75 @@
+{
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0,
+    "analysis": {
+      "analyzer": {
+        "ko_standard": {
+          "tokenizer": "standard",
+          "filter": ["lowercase", "asciifolding"]
+        },
+        "edge_ngram_index": {
+          "tokenizer": "edge_ngram_tokenizer",
+          "filter": ["lowercase", "asciifolding"]
+        },
+        "edge_ngram_search": {
+          "tokenizer": "lowercase"
+        }
+      },
+      "tokenizer": {
+        "edge_ngram_tokenizer": {
+          "type": "edge_ngram",
+          "min_gram": 1,
+          "max_gram": 10,
+          "token_chars": ["letter", "digit"]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "id": {
+        "type": "keyword"
+      },
+      "name": {
+        "type": "text",
+        "analyzer": "ko_standard",
+        "fields": {
+          "keyword": { "type": "keyword", "ignore_above": 256 },
+          "autocomplete": {
+            "type": "text",
+            "analyzer": "edge_ngram_index",
+            "search_analyzer": "edge_ngram_search"
+          }
+        }
+      },
+      "brand": {
+        "type": "keyword"
+      },
+      "category": {
+        "type": "keyword"
+      },
+      "sizes": {
+        "type": "keyword"
+      },
+      "priceWon": {
+        "type": "long"
+      },
+      "stockQuantity": {
+        "type": "integer"
+      },
+      "status": {
+        "type": "keyword"
+      },
+      "clickCount": {
+        "type": "long"
+      },
+      "releasedAt": {
+        "type": "date"
+      },
+      "updatedAt": {
+        "type": "date"
+      }
+    }
+  }
+}
