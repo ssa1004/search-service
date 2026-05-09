@@ -1,0 +1,102 @@
+spring:
+  application:
+    name: search-service
+  autoconfigure:
+    # Spring Boot 가 spring.kafka.bootstrap-servers 의 빈 문자열에도 KafkaTemplate / ListenerContainer
+    # 자동 구성을 시도해 부팅을 깨뜨리는 문제 회피 — 우리 KafkaConfig 가 ConditionalOnProperty 로 단독
+    # 책임. 명시적 비활성.
+    exclude:
+      - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+  threads:
+    virtual:
+      enabled: true   # Java 21 virtual threads — REST + Kafka consumer 가 모두 가벼운 IO 위주.
+  datasource:
+    url: jdbc:h2:mem:search;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc.time_zone: UTC
+        jdbc.batch_size: 50
+        order_inserts: true
+        order_updates: true
+        query.in_clause_parameter_padding: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:#{null}}
+    producer:
+      acks: all
+      retries: 5
+      properties:
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 5
+    consumer:
+      group-id: search-cdc
+      enable-auto-commit: false
+      auto-offset-reset: earliest
+
+# ── 도메인 properties ───────────────────────────────────────────────────────
+search:
+  # search.kafka.enabled=true 일 때만 KafkaConfig + CdcOutboxRelay + CdcConsumer 활성. 비활성
+  # 모드에서는 outbox 가 쌓이지만 발행 안 됨 (단위 테스트 / 로컬 dev 의 빠른 부팅용).
+  kafka:
+    enabled: ${SEARCH_KAFKA_ENABLED:false}
+  # ES alias 이름. 검색은 항상 alias 로 — reindex 시 alias swap 으로 무중단 전환.
+  alias: products
+  # reindex 시 한 batch 당 source DB 에서 읽어 ES 로 보낼 row 수.
+  reindex-batch-size: 500
+  elasticsearch-host: ${ELASTICSEARCH_HOST:localhost:9200}
+  cdc-topic: product.changes
+  # cdc relay polling interval — 5초.
+  cdc:
+    relay-interval-ms: 5000
+  # search.engine: "memory" 로 두면 InMemorySearchEngineAdapter 가 등록되어 ES 없이 동작.
+  # default: "elasticsearch".
+  engine: ${SEARCH_ENGINE:elasticsearch}
+
+# ── Resilience4j: ES 호출 보호 ─────────────────────────────────────────────
+resilience4j:
+  circuitbreaker:
+    instances:
+      elasticsearch-search:
+        slidingWindowSize: 50
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 5
+      elasticsearch-index:
+        slidingWindowSize: 50
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+  retry:
+    instances:
+      elasticsearch-search:
+        maxAttempts: 3
+        waitDuration: 200ms
+      elasticsearch-index:
+        maxAttempts: 3
+        waitDuration: 200ms
+
+# ── Actuator / metrics ─────────────────────────────────────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    elasticsearch:
+      enabled: false   # ES 미가용 시 헬스체크 fail 막기 위해 비활성 (CB metric 으로 대체).
+
+logging:
+  level:
+    root: INFO
+    com.example.search: DEBUG

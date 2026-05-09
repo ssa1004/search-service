@@ -24,6 +24,9 @@ dependencies {
     // Resilience4j — 빈 customizer (CB / Retry / Bulkhead).
     implementation("io.github.resilience4j:resilience4j-spring-boot3:2.2.0")
 
+    // Kafka — KafkaConfig 가 ConsumerFactory / ContainerFactory 빈을 직접 정의.
+    implementation("org.springframework.kafka:spring-kafka")
+
     // Actuator + Prometheus.
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("io.micrometer:micrometer-registry-prometheus")
