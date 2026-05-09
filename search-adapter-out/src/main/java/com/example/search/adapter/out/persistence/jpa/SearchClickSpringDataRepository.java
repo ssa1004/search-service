@@ -15,4 +15,11 @@ public interface SearchClickSpringDataRepository extends JpaRepository<SearchCli
     @Query("SELECT COUNT(c) FROM SearchClickJpaEntity c WHERE c.productId = :productId "
             + "AND c.occurredAt >= :since")
     long countByProductSince(@Param("productId") String productId, @Param("since") Instant since);
+
+    /**
+     * 구간 클릭 수 — CTR 분자 (ADR-0018).
+     */
+    @Query("SELECT COUNT(c) FROM SearchClickJpaEntity c "
+            + "WHERE c.occurredAt >= :from AND c.occurredAt < :to")
+    long countByOccurredBetween(@Param("from") Instant from, @Param("to") Instant to);
 }
