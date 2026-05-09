@@ -6,6 +6,10 @@ plugins {
 
 dependencies {
     implementation(project(":search-application"))
+    // CDC consumer 가 outbox relay 가 정의한 message envelope (CdcEventPayload + ProductDtoMapper) 를
+    // 공유하기 위해 adapter-out 을 의존. inbound 가 outbound 의 wire format 에 결합되는 것은 의도된
+    // 설계 — Kafka topic schema 는 한 곳에만 두는 게 단일 진실값.
+    implementation(project(":search-adapter-out"))
 
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-validation")
