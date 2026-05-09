@@ -23,6 +23,12 @@
           ]
         }
       },
+      "filter": {
+        "domain_synonyms": {
+          "type": "synonym_graph",
+          "synonyms": []
+        }
+      },
       "analyzer": {
         "ko_standard": {
           "type": "custom",
@@ -31,7 +37,8 @@
             "lowercase",
             "asciifolding",
             "nori_part_of_speech",
-            "nori_readingform"
+            "nori_readingform",
+            "domain_synonyms"
           ]
         },
         "edge_ngram_index": {
