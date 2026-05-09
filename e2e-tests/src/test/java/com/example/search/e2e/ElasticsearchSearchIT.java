@@ -26,6 +26,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.elasticsearch.ElasticsearchContainer;
+import org.testcontainers.images.builder.ImageFromDockerfile;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -50,12 +51,24 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Testcontainers
 class ElasticsearchSearchIT {
 
+    /**
+     * 운영 mapping 이 nori (ADR-0015) 를 참조하므로 IT 도 같은 이미지 (analysis-nori 포함) 로
+     * 검증해야 mapping 적용이 가능하다. docker/elasticsearch/Dockerfile 을 빌드해 받은 image tag
+     * 를 ElasticsearchContainer 에 전달.
+     */
     @Container
     static final ElasticsearchContainer ES = new ElasticsearchContainer(
-            DockerImageName.parse("docker.elastic.co/elasticsearch/elasticsearch:8.15.3"))
+            DockerImageName.parse(noriImage()).asCompatibleSubstituteFor(
+                    "docker.elastic.co/elasticsearch/elasticsearch"))
             .withEnv("discovery.type", "single-node")
             .withEnv("xpack.security.enabled", "false")
             .withEnv("ES_JAVA_OPTS", "-Xms512m -Xmx512m");
+
+    private static String noriImage() {
+        return new ImageFromDockerfile("search-service-es-nori-test", false)
+                .withDockerfile(java.nio.file.Path.of("..", "docker", "elasticsearch", "Dockerfile"))
+                .get();
+    }
 
     @DynamicPropertySource
     static void register(DynamicPropertyRegistry registry) {

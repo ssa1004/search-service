@@ -3,10 +3,36 @@
     "number_of_shards": 1,
     "number_of_replicas": 0,
     "analysis": {
+      "tokenizer": {
+        "edge_ngram_tokenizer": {
+          "type": "edge_ngram",
+          "min_gram": 1,
+          "max_gram": 10,
+          "token_chars": ["letter", "digit"]
+        },
+        "nori_user_dict": {
+          "type": "nori_tokenizer",
+          "decompound_mode": "mixed",
+          "discard_punctuation": "true",
+          "user_dictionary_rules": [
+            "조던1",
+            "에어조던1",
+            "덩크로우",
+            "덩크하이",
+            "이지부스트"
+          ]
+        }
+      },
       "analyzer": {
         "ko_standard": {
-          "tokenizer": "standard",
-          "filter": ["lowercase", "asciifolding"]
+          "type": "custom",
+          "tokenizer": "nori_user_dict",
+          "filter": [
+            "lowercase",
+            "asciifolding",
+            "nori_part_of_speech",
+            "nori_readingform"
+          ]
         },
         "edge_ngram_index": {
           "tokenizer": "edge_ngram_tokenizer",
@@ -14,14 +40,6 @@
         },
         "edge_ngram_search": {
           "tokenizer": "lowercase"
-        }
-      },
-      "tokenizer": {
-        "edge_ngram_tokenizer": {
-          "type": "edge_ngram",
-          "min_gram": 1,
-          "max_gram": 10,
-          "token_chars": ["letter", "digit"]
         }
       }
     }
