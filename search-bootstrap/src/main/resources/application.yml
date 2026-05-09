@@ -1,4 +1,17 @@
+server:
+  # ── Graceful shutdown (ADR-0011) ─────────────────────────────────────────
+  # SIGTERM 수신 시 즉시 connector close 대신 in-flight 요청을 기다린다.
+  # K8s 의 preStop 5s + lifecycle 25s = terminationGracePeriodSeconds 30s 안에
+  # 안전하게 끝내는 예산.
+  shutdown: graceful
+
 spring:
+  # ── Lifecycle timeout (ADR-0011) ─────────────────────────────────────────
+  # SmartLifecycle phase 당 25s — 가장 느린 빈 (Kafka listener container 가 일반적)
+  # 도 graceful 정리 가능. 너머는 강제 종료.
+  lifecycle:
+    timeout-per-shutdown-phase: 25s
+
   application:
     name: search-service
   autoconfigure:
@@ -115,9 +128,19 @@ management:
     health:
       probes:
         enabled: true
+      # K8s probe 그룹 — startup 은 livenessProbe 가 wrap, readiness 는 ApplicationReadinessCoordinator
+      # 가 ES ping 결과를 게시 (ADR-0010).
+      group:
+        readiness:
+          include: readinessState,searchEngine
+      show-details: when-authorized
   health:
     elasticsearch:
-      enabled: false   # ES 미가용 시 헬스체크 fail 막기 위해 비활성 (CB metric 으로 대체).
+      enabled: false   # 우리 SearchEngineHealthIndicator 가 책임 (built-in 은 보안 / TLS 가정 다름)
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
 
 logging:
   level:
