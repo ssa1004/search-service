@@ -21,4 +21,7 @@ dependencies {
     testImplementation("org.springframework.kafka:spring-kafka-test")
     testImplementation("org.awaitility:awaitility")
     testImplementation("co.elastic.clients:elasticsearch-java:8.15.3")
+
+    // NoriAnalyzerIT 가 raw REST 호출을 Jackson 으로 파싱.
+    testImplementation("com.fasterxml.jackson.core:jackson-databind")
 }

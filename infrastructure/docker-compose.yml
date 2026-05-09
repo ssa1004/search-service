@@ -14,7 +14,12 @@ services:
       retries: 10
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    # nori (한국어 형태소) 플러그인 포함 — products-mapping.json 의 ko_standard 가 nori_tokenizer
+    # 의존 (ADR-0015). docker/elasticsearch.Dockerfile 에서 elasticsearch-plugin install.
+    build:
+      context: ../docker/elasticsearch
+      dockerfile: Dockerfile
+    image: search-service/elasticsearch-nori:8.15.3
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
