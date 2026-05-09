@@ -6,6 +6,7 @@ import com.example.search.application.port.in.HandleProductChangeUseCase;
 import com.example.search.domain.event.ProductChangeEvent;
 import com.example.search.domain.product.ProductId;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -24,11 +25,12 @@ import java.time.Instant;
  *   <li>JSON → {@link ProductChangeEvent} 도메인 변환.</li>
  *   <li>{@link HandleProductChangeUseCase} 호출 — INSERT/UPDATE 는 indexer 위임, DELETE 는 ES
  *       문서 삭제.</li>
- *   <li>예외 없이 끝났을 때만 ack — 처리 실패 시 재처리 (at-least-once).</li>
+ *   <li>예외 없이 끝났을 때만 ack — 처리 실패 시 DefaultErrorHandler 가 3회 retry 후 DLT 로
+ *       격리 (ADR-0013). use case 가 idempotent 이므로 retry 중복 수신은 결과 같음.</li>
  * </ol>
  *
- * <p>{@code AckMode.MANUAL_IMMEDIATE} 가정 — bootstrap 의 KafkaConfig 가 설정. use case 가 idempotent
- * 이므로 중복 수신은 결과 같음 (ES external version 비교).</p>
+ * <p>{@code AckMode.MANUAL_IMMEDIATE} — bootstrap 의 KafkaConfig 가 설정. 본 컨슈머는 예외를
+ * propagate 만 하고 retry / DLT 라우팅은 KafkaConfig 의 cdcErrorHandler 가 책임.</p>
  */
 @Component
 @ConditionalOnProperty(name = "search.kafka.enabled", havingValue = "true")
@@ -38,20 +40,23 @@ public class CdcConsumer {
 
     private final HandleProductChangeUseCase changeUseCase;
     private final ObjectMapper objectMapper;
+    private final MeterRegistry meterRegistry;
 
     @KafkaListener(topics = "${search.cdc.topic:product.changes}",
             groupId = "${spring.kafka.consumer.group-id:search-cdc}",
             containerFactory = "kafkaListenerContainerFactory")
     public void onMessage(String payload, Acknowledgment ack) {
+        String topic = "product.changes";
         try {
             CdcEventPayload event = objectMapper.readValue(payload, CdcEventPayload.class);
             ProductChangeEvent domainEvent = toDomain(event);
             changeUseCase.handle(domainEvent);
             ack.acknowledge();
+            meterRegistry.counter("cdc.consume", "topic", topic, "outcome", "success").increment();
         } catch (Exception e) {
-            // ack 안 함 → consumer 가 같은 offset 다시 읽음. retry 횟수 제한 / DLQ 는 ListenerErrorHandler
-            // 로 별도 정책 가능 (현재는 무한 재시도가 default — 운영에서는 DLQ 필수).
-            log.error("CDC 메시지 처리 실패 — 재시도. payload={}", payload, e);
+            // 예외 propagate → DefaultErrorHandler 가 3회 retry 후 DLT 발행. retry / dlt 메트릭은
+            // KafkaConfig 의 retryListener / recoverer 가 기록.
+            log.error("CDC 메시지 처리 실패 — 에러 핸들러로 위임. payload={}", payload, e);
             throw new IllegalStateException("CDC 처리 실패", e);
         }
     }
