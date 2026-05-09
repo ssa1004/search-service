@@ -5,7 +5,7 @@ import java.math.RoundingMode;
 import java.util.Objects;
 
 /**
- * 가격 표현. KRW 만 다룬다고 가정 — 한정판 sneaker 도메인은 단일 통화. 추후 다국가 시 currency
+ * 가격 표현. KRW 만 다룬다고 가정 — 현재 도메인은 단일 통화. 추후 다국가 시 currency
  * 필드 추가.
  *
  * <p>{@code BigDecimal} 을 내부에 두지만 외부에는 {@code long won()} 으로 노출 — KRW 는 소수점이

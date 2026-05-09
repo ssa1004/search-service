@@ -13,7 +13,7 @@ K8s probe 를 readiness + liveness 두 개만 운영하면 두 가지 문제가 
 
 검색 서비스 도메인 특성:
 - ES 는 사실상 핵심 dependency — ES DOWN 이면 검색 endpoint 의 대부분이 무의미.
-- Kafka 는 *부수적* — CDC consumer 만 영향 받고 본인이 retry. REST 검색은 Kafka 와 무관.
+- Kafka 는 부수적이다 — CDC consumer 만 영향 받고 본인이 retry. REST 검색은 Kafka 와 무관.
 
 ## 결정
 **3종 probe + 도메인 헬스 indicator + readiness coordinator.**

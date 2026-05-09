@@ -4,9 +4,9 @@
 적용
 
 ## 배경
-기존 `CdcConsumer` 는 처리 실패 시 ack 안 하고 예외를 던져 *무한 재시도* 가 default. 두 문제:
-- payload schema 오류 / corrupted JSON 처럼 **영구 실패** 인 메시지가 같은 partition 의 처리를
-  영구히 막는다 (poison pill).
+기존 `CdcConsumer` 는 처리 실패 시 ack 안 하고 예외를 던져 무한 재시도가 default. 두 문제:
+- payload schema 오류 / corrupted JSON 처럼 **재시도해도 회복 불가능한** 메시지가 같은
+  partition 의 후속 처리를 막는다 (poison pill).
 - consumer lag 메트릭이 끝없이 증가 — alert 만 시끄럽고 root cause 는 한 메시지.
 
 해결 방향:
@@ -25,8 +25,9 @@
    DLT earliest 부터 batch 만큼 원본 토픽 재발행.
 
 ### Backoff 선택 근거
-- `interval=0` — CDC 의 실패는 통상 transient (idempotent retry 가능) 이거나 영구 (schema
-  오류). 전자는 0ms 로도 회복, 후자는 wait 시간이 의미 없음. 짧게 끝낸다.
+- `interval=0` — CDC 의 실패는 통상 transient (idempotent retry 로 회복) 이거나 회복
+  불가능한 schema 오류. 전자는 0ms 로도 풀리고, 후자는 wait 시간이 의미 없으므로 짧게
+  끝낸다.
 - `maxAttempts=2` (총 3회) — 통상 운영 권고. 필요시 yaml 외부화.
 
 ### 메트릭
