@@ -11,6 +11,7 @@ import com.example.search.adapter.out.elasticsearch.InMemorySearchEngineAdapter;
 import com.example.search.application.port.out.IndexWriterPort;
 import com.example.search.application.port.out.SearchEnginePort;
 import com.example.search.application.port.out.SearchIndexProperties;
+import com.example.search.bootstrap.health.SearchEngineHealthIndicator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
@@ -62,6 +63,16 @@ public class ElasticsearchConfig {
         return new ElasticsearchIndexWriterAdapter(client, props, mapping);
     }
 
+    /**
+     * readiness group 의 {@code searchEngine} 헬스 — ES ping 결과 보고. ApplicationReadinessCoordinator
+     * 가 같은 빈을 polling 한다.
+     */
+    @Bean("searchEngine")
+    @ConditionalOnProperty(name = "search.engine", havingValue = "elasticsearch", matchIfMissing = true)
+    public SearchEngineHealthIndicator esEngineHealth(ElasticsearchClient client) {
+        return new SearchEngineHealthIndicator(client);
+    }
+
     // ── 메모리 모드 — ES 없이 동작하는 dev / 단순 e2e ───────────────────────
 
     /**
@@ -71,5 +82,15 @@ public class ElasticsearchConfig {
     @ConditionalOnProperty(name = "search.engine", havingValue = "memory")
     public InMemorySearchEngineAdapter inMemoryAdapter() {
         return new InMemorySearchEngineAdapter();
+    }
+
+    /**
+     * memory 모드 — 항상 UP. readiness group 정의가 두 모드 모두에서 같은 indicator 이름을 참조하기
+     * 위함.
+     */
+    @Bean("searchEngine")
+    @ConditionalOnProperty(name = "search.engine", havingValue = "memory")
+    public SearchEngineHealthIndicator memoryEngineHealth() {
+        return SearchEngineHealthIndicator.inMemory();
     }
 }
