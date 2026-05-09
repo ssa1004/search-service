@@ -66,9 +66,42 @@ ES `function_score` 로 두 시그널을 BM25 점수에 곱합니다.
 ### 6. Resilience4j 로 ES 호출 격리
 
 ES 호출에 Circuit Breaker + Retry 적용. ES 응답 실패율이 임계치를 넘으면 즉시 회로 차단
-— ES 의 긴 응답 지연이 우리 처리 흐름에 영향을 주지 않도록 합니다.
+— ES 의 긴 응답 지연이 우리 처리 흐름에 영향을 주지 않도록 합니다. (ADR-0012)
 
-설계 결정의 상세 배경은 [docs/adr/](docs/adr/) 의 ADR 8건에 정리되어 있습니다.
+### 7. CDC consumer DLQ + manual replay
+
+CDC 컨슈머가 처리 실패한 메시지는 retry 후 DLT (`product.changes.DLT`) 로 격리, source
+컨슈머는 다음 메시지로 진행. 운영자는 `/api/v1/admin/cdc/dlt/replay` 로 원인 해결 후
+재처리. (ADR-0013)
+
+### 8. Outbox 정리 + 멀티 인스턴스 안전 스케줄
+
+Outbox 의 published 행은 retention 정책에 따라 정리 — `@Scheduled` 작업이 ShedLock 으로
+한 인스턴스만 실행되도록 제어. (ADR-0014)
+
+### 9. nori 한국어 형태소 + 도메인 user_dictionary
+
+`name` 의 분석기를 nori 로 교체. user_dictionary 로 "조던1", "덩크로우" 같은 도메인 고유
+명사를 단일 토큰으로 보존, `nori_part_of_speech` 로 조사 / 어미 제거. (ADR-0015)
+
+### 10. 운영자 동의어 사전 + 런타임 reload
+
+운영자가 등록한 동의어 그룹을 ES `synonym_graph` filter 로 빌드, alias swap 으로 무중단
+적용. zero-result 키워드를 보고 운영자가 *즉시* 동의 관계를 추가 가능. (ADR-0017)
+
+### 11. 저장 검색 (Saved Search) + 신규 매치 알림
+
+사용자가 검색 조건을 저장 → 5분 주기 스케줄러가 cursor 이후 신규 매치 평가 → Kafka topic
+`search.alert.fired` 로 알림 발행. notification-hub 등 외부 service 가 채널별 발송. ShedLock
+으로 멀티 인스턴스 중복 방지. (ADR-0016)
+
+### 12. 검색 query analytics — Top / Zero-result / Latency / CTR
+
+검색 호출마다 `search_events` 에 기록. 운영 admin 이 4종 분석 (인기 검색어, 0건 검색어,
+응답 latency p50/p95/p99, click-through rate) 을 시간 구간으로 조회. zero-result 분석이
+동의어 / boost rule 운영의 입력. (ADR-0018)
+
+설계 결정의 상세 배경은 [docs/adr/](docs/adr/) 의 ADR 18건에 정리되어 있습니다.
 
 ## 시스템 흐름
 
@@ -121,24 +154,31 @@ graph LR
 
 | 모듈 | 책임 |
 |---|---|
-| `search-domain` | 순수 도메인 (Spring 의존 0) — `Product`, `SearchQuery`, `IndexDocument`, `FacetSpec`, `BoostRule`, `ProductChangeEvent` |
-| `search-application` | 7개 유스케이스 + outbound port (검색엔진 / 인덱스 writer / source repo / 클릭 repo) |
-| `search-adapter-in` | REST 컨트롤러 + CDC Kafka 컨슈머 |
-| `search-adapter-out` | Elasticsearch Java Client + JPA + Outbox + CdcOutboxRelay |
-| `search-bootstrap` | Spring Boot 진입점, Flyway, ES mapping JSON, 모든 빈 등록 |
-| `e2e-tests` | 메모리 모드 e2e + Testcontainers ES IT (`@Tag("integration")`) |
+| `search-domain` | 순수 도메인 (Spring 의존 0) — `Product`, `SearchQuery`, `IndexDocument`, `FacetSpec`, `BoostRule`, `ProductChangeEvent`, `SavedSearch`, `SynonymGroup`, `SearchEvent` |
+| `search-application` | 검색 / 인덱싱 / 동의어 / 저장검색 / 분석 use case + outbound port |
+| `search-adapter-in` | REST 컨트롤러 (search + admin) + CDC Kafka 컨슈머 + DLT consumer |
+| `search-adapter-out` | Elasticsearch Java Client + JPA + Outbox + CdcOutboxRelay + SavedSearch evaluator + 동의어 sync + analytics writer |
+| `search-bootstrap` | Spring Boot 진입점, Flyway, ES mapping JSON, ShedLock, 모든 빈 등록 |
+| `e2e-tests` | 메모리 모드 e2e + Testcontainers ES IT (Nori, Resilience4j, 검색 flow — `@Tag("integration")`) |
 
-## 7개 use case
+## Use case 와 진입점
 
-| # | UseCase | 진입점 |
-|---|---------|--------|
-| 1 | `SearchProductUseCase` | `POST /api/v1/search/products` — 키워드 + filter + facet + boost |
-| 2 | `AutocompleteUseCase` | `GET /api/v1/search/autocomplete?q=` — edge_ngram prefix |
-| 3 | `IndexProductUseCase` | CDC 컨슈머 (INSERT/UPDATE 위임) |
-| 4 | `ReindexAllUseCase` | `POST /api/v1/admin/index/reindex` — alias swap |
-| 5 | `RecordSearchClickUseCase` | `POST /api/v1/search/searches/{id}/clicks` |
-| 6 | `SuggestRelatedUseCase` | `GET /api/v1/search/related?q=` — fuzzy (Levenshtein) |
-| 7 | `HandleProductChangeUseCase` | CDC 컨슈머 진입점 (INSERT/UPDATE/DELETE 분기) |
+검색 7종 + 동의어 4종 + 저장검색 4종 + 분석 1종 (단일 facade UseCase 가 4종 admin 조회)
+구조. REST + CDC consumer + 스케줄러 가 진입점.
+
+| 영역 | 진입점 | 비고 |
+|---|---|---|
+| 키워드 검색 | `POST /api/v1/search/products` | filter + facet + function_score boost |
+| 자동완성 | `GET /api/v1/search/autocomplete?q=` | edge_ngram prefix |
+| 관련 검색어 | `GET /api/v1/search/related?q=` | fuzzy (Levenshtein) — zero-result 회복 |
+| 클릭 시그널 | `POST /api/v1/search/searches/{id}/clicks` | boost 학습 입력 |
+| Reindex | `POST /api/v1/admin/index/reindex` | alias swap, 무중단 |
+| CDC 컨슈머 | Kafka topic `product.changes` | INSERT/UPDATE/DELETE 분기 → ES |
+| CDC DLT 재처리 | `POST /api/v1/admin/cdc/dlt/replay` | 운영 수동 replay |
+| 동의어 등록 / 조회 / 삭제 | `POST/GET/DELETE /api/v1/admin/synonyms` | `X-Operator-Id` 헤더로 audit |
+| 동의어 ES 적용 | `POST /api/v1/admin/synonyms/apply` | settings update + alias swap |
+| 저장 검색 평가 | `@Scheduled` (5분 주기, ShedLock) | cursor 이후 신규 매치만 → Kafka 알림 |
+| 검색 분석 — top / zero-result / latency / CTR | `GET /api/v1/admin/analytics/{queries/top \| queries/zero-result \| latency \| ctr}` | `from`, `to` ISO-8601 instant |
 
 ## 실행 방법
 
@@ -229,12 +269,12 @@ curl -X POST http://localhost:8080/api/v1/admin/index/reindex \
 
 | 모듈 | 단위 테스트 | 검증 |
 |---|---|---|
-| domain | 23 | Money, Product, SearchQuery, IndexDocument, FacetSpec invariant |
-| application | 12 | 7개 use case (mockito) |
-| adapter-out | 14 | InMemorySearchEngineAdapter, Levenshtein, ProductDtoMapper |
+| domain | 53 | Money, Product, SearchQuery, IndexDocument, FacetSpec, SynonymGroup, SavedSearch, SearchEvent, NotifyChannel, ClickThroughRate invariant |
+| application | 35 | use case 들 (mockito) — 검색 / 인덱싱 / 동의어 / 저장검색 / 분석 |
+| adapter-out | 27 | InMemorySearchEngineAdapter, Levenshtein, ProductDtoMapper, OutboxRetentionJob, ResilientSearchClient, analytics writer / reader |
 | adapter-in | 9 | SearchRequestMapper, SearchController slice (MockMvc) |
-| bootstrap | 1 | Spring 컨텍스트 부팅 (memory 모드) |
-| e2e-tests | 2 + 1 IT | 메모리 e2e full flow + Testcontainers ES (@Tag integration) |
+| bootstrap | 12 | Spring 컨텍스트 부팅, HikariPool config, ApplicationReadinessCoordinator, CdcErrorHandler, analytics integration |
+| e2e-tests | 2 + Testcontainers IT | 메모리 e2e full flow + nori analyzer IT + Elasticsearch search IT (`@Tag("integration")`) |
 
 ## 운영 모드 (`prod` profile)
 
@@ -255,8 +295,8 @@ curl -X POST http://localhost:8080/api/v1/admin/index/reindex \
 
 ## 향후 개선 사항
 
-- nori (한국어 형태소) analyzer 적용 — 한국어 키워드 검색의 정확도 향상
 - 초성 / 자음 검색 — Hangul Jamo filter 를 edge_ngram 위에 추가
 - Debezium 정식 도입 — outbox polling → WAL 기반 sub-second indexing
 - Learning-to-Rank (LTR) — 클릭 / 구매 / dwell time 기반 학습 모델
-- 운영자 대시보드 — slow query / facet 사용 분포 / boost rule A/B
+- 운영자 대시보드 UI — 현재의 admin REST API (analytics / synonyms / DLT replay) 위에 화면
+- SavedSearch 알림 빈도 조절 — 한 사용자 단위 시간 N회 이상이면 통합
