@@ -20,8 +20,9 @@ dependencies {
     // OpenAPI.
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
 
-    // Tracing.
+    // Tracing + metrics — CdcConsumer / CdcDltConsumer 가 cdc.consume / cdc.dlt 카운터 발행.
     implementation("io.micrometer:micrometer-tracing")
+    implementation("io.micrometer:micrometer-core")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.kafka:spring-kafka-test")

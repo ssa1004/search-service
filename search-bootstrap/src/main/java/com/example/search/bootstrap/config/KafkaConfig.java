@@ -1,7 +1,9 @@
 package com.example.search.bootstrap.config;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,9 +15,13 @@ import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
+import org.springframework.kafka.core.KafkaOperations;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.listener.ContainerProperties;
+import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
+import org.springframework.kafka.listener.DefaultErrorHandler;
+import org.springframework.util.backoff.FixedBackOff;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -50,7 +56,8 @@ public class KafkaConfig {
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory(
-            ConsumerFactory<String, String> consumerFactory) {
+            ConsumerFactory<String, String> consumerFactory,
+            DefaultErrorHandler cdcErrorHandler) {
         ConcurrentKafkaListenerContainerFactory<String, String> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
@@ -58,7 +65,39 @@ public class KafkaConfig {
         // CDC 는 partition 간 순서가 product_id 단위로 보장되어야 하므로 concurrency 는 1 (운영에서는
         // partition 수에 맞춰 늘릴 수 있음).
         factory.setConcurrency(1);
+        // 에러 핸들러 부착 — 3회 즉시 retry 후 DLT 로 라우팅 (ADR-0013).
+        factory.setCommonErrorHandler(cdcErrorHandler);
         return factory;
+    }
+
+    /**
+     * DLQ 정책 (ADR-0013) — DeadLetterPublishingRecoverer + FixedBackOff(0, 2).
+     *
+     * <p>3회 즉시 retry (interval 0) — CDC 메시지는 영구 schema 오류 / payload corruption 이 다수.
+     * 같은 메시지 반복 retry 보다 빨리 DLT 로 격리.</p>
+     *
+     * <p>DLT 토픽: {@code <원본>.DLT} (Spring Kafka default). 운영자는 DLT consumer 또는 admin
+     * replay endpoint 로 처리.</p>
+     */
+    @Bean
+    public DefaultErrorHandler cdcErrorHandler(KafkaOperations<String, String> kafkaTemplate,
+                                               MeterRegistry meterRegistry) {
+        DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(
+                kafkaTemplate,
+                (record, ex) -> {
+                    // default destination — <topic>.DLT (같은 partition).
+                    meterRegistry.counter("cdc.consume",
+                            "topic", record.topic(),
+                            "outcome", "dlt").increment();
+                    return new TopicPartition(record.topic() + ".DLT", record.partition());
+                });
+        // FixedBackOff(interval=0ms, maxAttempts=2) → 첫 호출 + 2회 retry = 총 3회 시도.
+        DefaultErrorHandler handler = new DefaultErrorHandler(recoverer, new FixedBackOff(0L, 2L));
+        handler.setRetryListeners((record, ex, deliveryAttempt) ->
+                meterRegistry.counter("cdc.consume",
+                        "topic", record.topic(),
+                        "outcome", "retry").increment());
+        return handler;
     }
 
     @Bean

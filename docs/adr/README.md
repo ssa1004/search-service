@@ -17,3 +17,4 @@
 | [ADR-0010](0010-k8s-probes.md) | K8s 3종 probe + ES 종속 readiness coordinator |
 | [ADR-0011](0011-graceful-shutdown.md) | Spring Boot graceful shutdown + K8s preStop |
 | [ADR-0012](0012-resilient-search-client.md) | ES 호출 Resilience4j Retry + CircuitBreaker decorator |
+| [ADR-0013](0013-cdc-consumer-dlq.md) | CDC consumer DLQ (DefaultErrorHandler + DLT) + manual replay |
