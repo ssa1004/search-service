@@ -115,6 +115,28 @@ class EvaluateSavedSearchesServiceTest {
     }
 
     @Test
+    void since_커서는_finder_에_lastEvaluatedAt_그대로_전달_그리고_NOW_로_갱신() {
+        // 사이클 N 의 since 가 사이클 N-1 이 기록한 lastEvaluatedAt 과 정확히 같아야, finder 의
+        // strict gt 필터가 경계 시점 문서의 중복 알림을 막을 수 있다. 커서를 손대거나 보정값을
+        // 더하면 그 문서가 양쪽 사이클에서 누락되거나 중복되는 회귀가 생긴다.
+        Instant prev = NOW.minusSeconds(300);
+        SavedSearch s = new SavedSearch(
+                SavedSearchId.newId(), "u-1", "label",
+                SearchQuery.byKeyword("nike", Page.first(20)),
+                NotifyChannel.kafka("search.alert.fired"),
+                true, NOW.minusSeconds(3600), prev);
+        when(repository.findActiveBatchAfter(null, EvaluateSavedSearchesService.BATCH_SIZE))
+                .thenReturn(List.of(s));
+        when(matchFinder.findNewMatches(any(), any(), any(Integer.class)))
+                .thenReturn(List.of());
+
+        newService().evaluateAll();
+
+        verify(matchFinder).findNewMatches(s, prev, EvaluateSavedSearchesService.MAX_MATCHES_PER_SEARCH);
+        verify(repository).touchEvaluatedAt(s.id(), NOW);
+    }
+
+    @Test
     void cursor_paging_으로_여러_batch_처리() {
         SavedSearch a = sample("u-1");
         SavedSearch b = sample("u-2");
