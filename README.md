@@ -291,9 +291,56 @@ curl -X POST http://localhost:8080/api/v1/admin/index/reindex \
 - `infrastructure/docker-compose.integration.yml`: portfolio set 통합 시연 — 본 service +
   auth-stub + notification-hub-stub
 - `infrastructure/k8s/`: PSS restricted, HPA (CPU 60% → 3..12), PDB (minAvailable 2),
-  resource limits, readonly root filesystem
+  resource limits, readonly root filesystem (raw manifest 형태)
+- `helm/search-service/`: 같은 구성을 helm chart 로 packaging — values 기반 환경별 분기
 - `.github/workflows/ci.yml`: workflow_dispatch — gradle check + integrationTest +
   Docker build (push 없음)
+
+### Helm chart
+
+`infrastructure/k8s/` 의 raw manifest 와 동일한 형상을 chart 로 packaging 했습니다.
+환경별 분기 (dev / prod) 와 외부 secret (ExternalSecrets / sealed-secrets / vault) 참조를
+values 한 곳에서 관리합니다.
+
+```
+helm/search-service/
+  Chart.yaml
+  values.yaml          # 개발 / 스테이징 baseline (replica 1, ingress / HPA / NP off)
+  values-prod.yaml     # 운영 override (replica 3, HPA, ingress TLS, NetworkPolicy)
+  templates/
+    _helpers.tpl
+    serviceaccount.yaml
+    configmap.yaml
+    secret.yaml         # placeholder — 운영은 외부 secret 사용 (existingSecret)
+    service.yaml
+    deployment.yaml     # 3종 probe + preStop + graceful shutdown + ZGC
+    ingress.yaml        # /api/v1/search/* + /api/v1/admin/* 두 path
+    hpa.yaml
+    pdb.yaml
+    networkpolicy.yaml  # ingress-nginx 만 진입 허용 + 외부 의존 (PG/OS/Kafka/DNS) 화이트리스트
+```
+
+```bash
+# lint
+helm lint helm/search-service
+helm lint helm/search-service -f helm/search-service/values-prod.yaml
+
+# 렌더링 미리보기 (dev / prod)
+helm template search helm/search-service
+helm template search helm/search-service -f helm/search-service/values-prod.yaml
+
+# 운영 install — opensearch credentials 는 별도 secret (search-service-opensearch) 가
+# 미리 만들어져 있어야 한다 (ExternalSecrets 가 만들거나 sealed-secrets 로 commit).
+helm install search-service ./helm/search-service \
+  -n search-service --create-namespace \
+  -f helm/search-service/values.yaml \
+  -f helm/search-service/values-prod.yaml
+```
+
+운영 chart 의 *secret 정책*: `secret.create=false` 가 default. helm 으로 평문 secret 을
+commit 하지 않기 위해 `opensearch.auth.existingSecret` 와 `secret.name` (Postgres) 으로
+외부 secret 을 참조합니다. 로컬 / dev 검증 한정으로 `--set secret.create=true` 가
+허용됩니다.
 
 ## Portfolio Set 통합
 
