@@ -1,0 +1,146 @@
+# Cross-repo 통합 시연용 compose.
+#
+# - search-service (본 저장소) 본체 + Postgres + Elasticsearch (nori) + Kafka
+# - auth-stub: auth-service 의 JWK Set 노출만 모사 (정적 nginx)
+# - notification-hub-stub: 본 service 가 발사한 search.alert.fired topic 을 stdout 으로 echo
+# - domain-producer: docker exec 로 CDC 이벤트 / SavedSearchAlert 를 발사할 idle 컨테이너
+#
+# 실 운영 구성이 아닙니다. 8 레포를 모두 띄우지 않고 cross-repo 흐름만 닫아 시연하기 위한
+# stub 묶음입니다. 기존 docker-compose.yml (Kibana / Kafka UI 포함 로컬 개발 환경) 과 별개.
+#
+# 실행:
+#   docker compose -f infrastructure/docker-compose.integration.yml up -d --build
+#   ./scripts/integration-demo.sh
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: search
+      POSTGRES_USER: search
+      POSTGRES_PASSWORD: search
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U search"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  elasticsearch:
+    # nori (한국어 형태소) 플러그인 포함 — products-mapping.json 의 ko_standard 가 nori_tokenizer
+    # 의존 (ADR-0015). docker/elasticsearch/Dockerfile 에서 elasticsearch-plugin install.
+    build:
+      context: ../docker/elasticsearch
+      dockerfile: Dockerfile
+    image: search-service/elasticsearch-nori:8.15.3
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      # 시연 한정 — heap 512m. 동시에 다른 통합 stack 이 Docker Desktop 메모리를 점유해도
+      # OOMKill 회피. 실 운영은 infrastructure/k8s/ 의 resource limits 참조.
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health | grep -E 'green|yellow'"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  kafka:
+    # Apache 공식 KRaft 이미지 (single-node). bitnami 가 public registry 에서 빠지면서
+    # apache/kafka 로 이전. tools 는 /opt/kafka/bin/ 에 같은 이름으로 존재.
+    image: apache/kafka:3.7.0
+    environment:
+      - KAFKA_NODE_ID=0
+      - KAFKA_PROCESS_ROLES=controller,broker
+      - KAFKA_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+
+  search-service:
+    build:
+      context: ..
+      dockerfile: infrastructure/Dockerfile
+    depends_on:
+      postgres: { condition: service_healthy }
+      elasticsearch: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+      auth-stub: { condition: service_started }
+    environment:
+      # Postgres + Flyway
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/search
+      SPRING_DATASOURCE_USERNAME: search
+      SPRING_DATASOURCE_PASSWORD: search
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
+      # Elasticsearch + nori
+      SEARCH_ENGINE: elasticsearch
+      ELASTICSEARCH_HOST: elasticsearch:9200
+      # Kafka — CDC 색인 + SavedSearchAlert publish 모두 활성
+      SEARCH_KAFKA_ENABLED: "true"
+      KAFKA_BOOTSTRAP: kafka:9092
+      # 시연 한정: auth-stub 의 JWK Set 위치. 본 service 가 REST 진입점에서 JWT 검증을
+      # 활성화하면 spring.security.oauth2.resourceserver.jwt.jwk-set-uri 로 매핑하기 위한
+      # 자리 표시 — 현 단계에서는 변수만 주입해 stub 가 같은 네트워크에서 보이는지 확인.
+      AUTH_JWKS_URI: http://auth-stub:8080/.well-known/jwks.json
+    ports:
+      # 호스트 8088 → 컨테이너 8080. 다른 포트폴리오 service 의 통합 compose 와 동시
+      # 기동해도 충돌 없도록 일반 8080 회피.
+      - "8088:8080"
+
+  # auth-service stub — JWK Set 만 정적으로 서비스. 실제 토큰 발급은 demo 스크립트가
+  # 평문 mock JWT 를 만들어 사용. 실 service 의 /oauth2/jwks 와 같은 응답 모양 (kty / kid /
+  # alg / n / e) 만 모사. 파일은 build-time 에 image 로 COPY — host bind mount 비의존.
+  auth-stub:
+    build:
+      context: ./integration/auth-stub
+      dockerfile: Dockerfile
+    image: search-service/auth-stub:dev
+    ports:
+      - "8085:8080"
+
+  # notification-hub stub — 본 service 가 발사한 search.alert.fired topic 을 from-beginning
+  # 으로 tail. 실제 hub 는 본 메시지를 받아 사용자 채널 (push / mail / slack) 로 fan-out.
+  # docker compose logs notification-hub-stub 으로 메시지 도달 확인.
+  notification-hub-stub:
+    image: apache/kafka:3.7.0
+    depends_on:
+      kafka: { condition: service_healthy }
+    entrypoint:
+      - bash
+      - -c
+      - |
+        # topic 이 아직 없을 수 있으므로 우선 생성 (idempotent).
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 \
+          --create --if-not-exists --topic search.alert.fired \
+          --partitions 1 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 \
+          --create --if-not-exists --topic product.changes \
+          --partitions 1 --replication-factor 1
+        echo "[notification-hub-stub] tailing search.alert.fired"
+        /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 \
+          --topic search.alert.fired \
+          --from-beginning \
+          --property print.key=true --property print.timestamp=true
+
+  # 도메인 event producer stub — kafka client 가 있으면 충분. demo 스크립트가
+  # docker exec 로 produce 명령을 실행한다. apache/kafka 이미지의 bin/ 을 PATH 에 노출.
+  domain-producer:
+    image: apache/kafka:3.7.0
+    depends_on:
+      kafka: { condition: service_healthy }
+      search-service: { condition: service_started }
+    entrypoint: ["sleep", "infinity"]
+    environment:
+      - PATH=/opt/kafka/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
