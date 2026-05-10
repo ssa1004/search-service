@@ -40,10 +40,12 @@ public record SynonymGroup(
     public static final int MAX_TERM_LENGTH = 100;
 
     /**
-     * ES synonym 표현은 쉼표 (BIDIRECTIONAL) 와 화살표 (ONE_WAY) 가 구분자. term 안에 그 문자가
-     * 들어가면 표현 자체가 깨진다 — 등록 단계에서 막아야 함.
+     * ES synonym 표현은 쉼표 (BIDIRECTIONAL) 와 화살표 (ONE_WAY) 가 구분자, 그리고 ES 는 rule
+     * 자체를 라인 단위로 파싱한다. 추가로 어댑터 측 JPA 직렬화가 줄바꿈을 term 구분자로 쓰므로
+     * {@code \\n} / {@code \\r} 가 term 안에 들어오면 round-trip 시 한 term 이 두 term 으로 split 되어
+     * 데이터가 조용히 망가진다. 등록 단계에서 모두 거부.
      */
-    private static final Pattern FORBIDDEN = Pattern.compile("[,\\\\]|=>");
+    private static final Pattern FORBIDDEN = Pattern.compile("[,\\\\\\n\\r]|=>");
 
     public SynonymGroup {
         Objects.requireNonNull(id, "id");
@@ -103,7 +105,7 @@ public record SynonymGroup(
         }
         if (FORBIDDEN.matcher(term).find()) {
             throw new IllegalArgumentException(
-                    "term 안에 ES synonym 구분자 (',', '\\', '=>') 사용 불가: " + term);
+                    "term 안에 ES synonym 구분자 (',', '\\', '=>', 줄바꿈) 사용 불가: " + term);
         }
     }
 
@@ -120,9 +122,8 @@ public record SynonymGroup(
      *   <li>ONE_WAY — {@code "term1 => term2, term3"} (LHS = 첫 1개, RHS = 나머지)</li>
      * </ul>
      *
-     * <p>ES 가 line 단위 파싱하므로 line break 가 들어가서는 안 됨 — 도메인이 line break 를 term 에
-     * 못 넣게 막진 않지만, 색인 시점에 그런 term 은 토큰화 자체로 의미가 없으므로 사실상 운영자
-     * 실수다. ES 측에서 무시되거나 split 된다.</p>
+     * <p>줄바꿈은 {@link #FORBIDDEN} 으로 등록 단계에서 거부하므로 본 출력에 줄바꿈이 섞일 가능성은
+     * 없다.</p>
      */
     public String toElasticsearchRule() {
         return switch (direction) {

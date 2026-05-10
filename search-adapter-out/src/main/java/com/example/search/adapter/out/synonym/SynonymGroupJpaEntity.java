@@ -21,9 +21,10 @@ import java.util.List;
  * 동의어 그룹 JPA 매핑.
  *
  * <p>{@code terms} 는 H2 / Postgres 양쪽 호환을 위해 단일 TEXT 컬럼에 {@code "\n"} (줄바꿈) 으로
- * 직렬화 — 도메인의 term validation 이 줄바꿈 / 쉼표 / 화살표를 막아주므로 round-trip 안전.
- * 별도 자식 테이블을 두는 대안은 reload 시 N+1 query 가 부담스럽고, 그룹 수 자체가 수백 단위라
- * 단일 컬럼이면 충분.</p>
+ * 직렬화. 도메인 {@code SynonymGroup} 의 term validation 이 줄바꿈 / 쉼표 / 백슬래시 / 화살표를
+ * 모두 막아주므로 한 term 이 split 되어 두 term 으로 풀리는 round-trip 사고가 막혀 있다. 별도 자식
+ * 테이블을 두는 대안은 reload 시 N+1 query 가 부담스럽고, 그룹 수 자체가 수백 단위라 단일 컬럼이면
+ * 충분.</p>
  */
 @Entity
 @Table(name = "synonym_groups")
