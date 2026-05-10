@@ -1,8 +1,11 @@
 package com.example.search.domain.synonym;
 
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -69,6 +72,23 @@ public record SynonymGroup(
 
         for (String term : terms) {
             validateTerm(term);
+        }
+        rejectDuplicates(terms);
+    }
+
+    /**
+     * 한 그룹에 같은 term 이 두 번 이상 들어오면 거부. {@code ko_standard} analyzer 가 lowercase
+     * 필터를 거치므로 대소문자만 다른 표기 (Air Jordan 1 / air jordan 1) 도 동일 토큰이 되어 중복.
+     * 운영자 입력 실수 (붙여넣기 / typo) 단계에서 잡는다.
+     */
+    private static void rejectDuplicates(List<String> terms) {
+        Set<String> seen = new HashSet<>();
+        for (String term : terms) {
+            String key = term.toLowerCase(Locale.ROOT);
+            if (!seen.add(key)) {
+                throw new IllegalArgumentException(
+                        "synonym 그룹에 중복 term (대소문자 무시): " + term);
+            }
         }
     }
 
