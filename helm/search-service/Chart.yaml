@@ -1,0 +1,22 @@
+apiVersion: v2
+name: search-service
+description: |
+  Commerce 상품 검색 서비스 — OpenSearch 기반 hexagonal, CDC + 동의어 hot reload +
+  SavedSearch alert (5분 cron + ShedLock).
+type: application
+# chart 자체 version. 앱 변경과 분리해서 올린다.
+version: 0.1.0
+# 본 service 의 application version (Spring Boot 모듈 기준).
+appVersion: "0.1.0"
+home: https://github.com/ssa1004/search-service
+sources:
+  - https://github.com/ssa1004/search-service
+keywords:
+  - search
+  - opensearch
+  - hexagonal
+  - cdc
+  - kafka
+maintainers:
+  - name: ssa1004
+    email: wittyahn@users.noreply.github.com

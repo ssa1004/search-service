@@ -1,0 +1,220 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# search-service helm values — default (개발 / 스테이징 baseline).
+# 운영은 values-prod.yaml 에서 override (replicaCount, hpa, ingress TLS,
+# networkPolicy, opensearch credentials 등).
+# ─────────────────────────────────────────────────────────────────────────────
+
+image:
+  repository: ghcr.io/ssa1004/search-service
+  tag: ""              # 비우면 .Chart.AppVersion 사용 (helpers).
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+# 단일 인스턴스 default — saved-search alert 가 ShedLock 으로 보호되므로
+# replica 늘려도 중복 발사는 없다 (ADR-0016).
+replicaCount: 1
+
+# nameOverride / fullnameOverride 는 chart helpers 의 표준 패턴.
+nameOverride: ""
+fullnameOverride: ""
+
+# ── 컨테이너 리소스 ──
+# 검색 latency 민감 → request 충분히 잡고 limit 도 여유. ZGC + virtual thread 가
+# CPU 잘 활용하므로 1.5 core 까지 burst 허용.
+resources:
+  requests:
+    cpu: 300m
+    memory: 768Mi
+  limits:
+    cpu: 1500m
+    memory: 1536Mi
+
+# ── Service ──
+service:
+  type: ClusterIP
+  port: 80
+  # 컨테이너 포트는 Spring Boot default 8080.
+  targetPort: 8080
+  annotations: {}
+
+# ── ServiceAccount ──
+# automountServiceAccountToken=false 로 token mount 차단 (현재 in-cluster API
+# 호출 없음). 추후 cloud-IAM (IRSA / Workload Identity) 붙일 때 annotations 사용.
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+  automountServiceAccountToken: false
+
+# ── Pod / 컨테이너 securityContext ──
+# PSS restricted 와 정렬 — non-root, drop ALL, readOnlyRootFs, seccomp RuntimeDefault.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+  readOnlyRootFilesystem: true
+
+# ── 3종 probe (ADR-0010) ──
+# startup : Flyway + ES mapping init. periodSeconds * failureThreshold = 150s 까지 부팅 허용.
+# readiness : ApplicationReadinessCoordinator 가 ES ping sampling — ES DOWN 시 즉시 traffic 차단.
+# liveness : Spring Boot livenessState — 회복 불가 (deadlock / OOM 직전) 에서만 DOWN.
+probes:
+  startup:
+    path: /actuator/health/liveness
+    periodSeconds: 5
+    failureThreshold: 30
+  readiness:
+    path: /actuator/health/readiness
+    periodSeconds: 5
+    failureThreshold: 3
+  liveness:
+    path: /actuator/health/liveness
+    periodSeconds: 10
+    failureThreshold: 3
+
+# ── Graceful shutdown 예산 (ADR-0011) ──
+# preStop sleep 5s (endpoint 전파 대기) + Spring graceful 25s = 30s.
+# 더 키울 필요가 있으면 동시에 application.yml 의 lifecycle.timeout-per-shutdown-phase 도 올린다.
+gracefulShutdown:
+  terminationGracePeriodSeconds: 30
+  preStopSleepSeconds: 5
+
+# ── ConfigMap (env from) ──
+# 평문 설정 — application.yml 의 env 참조 키 (SEARCH_*, KAFKA_*, OPENSEARCH_*, POSTGRES_*, REDIS_*)
+# 가 그대로 컨테이너 env 로 들어간다.
+config:
+  springProfilesActive: "prod"
+  searchEngine: "elasticsearch"      # opensearch 도 호환 (동일 REST API).
+  kafkaEnabled: "true"
+  # 도메인 properties — application.yml 안의 search.* 와 1:1.
+  cdcTopic: "product.changes"
+  alertTopic: "search.alert.fired"
+  alias: "products"
+  reindexBatchSize: "500"
+
+# ── 외부 의존 endpoint ──
+# 본 service 는 5종 외부 의존을 가진다.
+#  - postgres : source DB + ShedLock + Outbox + saved_search + search_events.
+#  - opensearch : 검색 엔진 (ES API 호환 — search.engine=elasticsearch).
+#  - kafka : CDC 토픽 + savedsearch alert 발행.
+#  - redis : 현재 미사용. 추후 동의어 cache / ratelimit 용 placeholder.
+#  - notification-hub : alert consumer (외부 service). endpoint 노출 불필요.
+postgres:
+  host: "postgres.data"
+  port: 5432
+  database: "search"
+  user: "search"
+  # password 는 secret 으로 — secret.postgres.passwordKey 참조.
+
+opensearch:
+  endpoint: "http://opensearch.data:9200"
+  # 운영은 values-prod.yaml 에서 secretRef 로 username/password 주입.
+  auth:
+    enabled: false
+    existingSecret: ""
+    usernameKey: "username"
+    passwordKey: "password"
+
+redis:
+  enabled: false
+  host: "redis.data"
+  port: 6379
+
+kafka:
+  bootstrap: "kafka.data:9092"
+
+# ── Secret (placeholder) ──
+# helm 으로 평문 secret 을 만드는 건 권장 안 함. 운영은 외부 secret 관리
+# (ExternalSecrets / sealed-secrets / vault) 가 만든 secret 을 existingSecret 으로 참조.
+# create=true 는 dev / 로컬 helm install 검증용.
+secret:
+  create: false
+  name: ""
+  postgres:
+    passwordKey: "postgres-password"
+    password: ""    # create=true 일 때만 값 사용.
+
+# ── Ingress ──
+# default OFF. 운영은 values-prod.yaml 에서 enabled + TLS + path 두 갈래 (search / admin).
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations: {}
+  hosts:
+    - host: search.example.com
+      paths:
+        # /api/v1/search/* — 사용자 검색 trafficl
+        - path: /api/v1/search
+          pathType: Prefix
+        # /api/v1/admin/* — 운영자 endpoint (동의어 hot reload, reindex, DLT replay, analytics).
+        # 운영은 별도 path 로 IP allow-list / mTLS 적용 권장 (annotations 로).
+        - path: /api/v1/admin
+          pathType: Prefix
+  tls: []
+
+# ── HorizontalPodAutoscaler ──
+# default OFF. saved-search alert 는 ShedLock 으로 한 인스턴스만 동작 → scale-out 안전.
+# CPU 60% — virtual thread + ZGC 부하 패턴에 맞춤.
+hpa:
+  enabled: false
+  minReplicas: 3
+  maxReplicas: 12
+  targetCPUUtilizationPercentage: 60
+  targetMemoryUtilizationPercentage: 0   # 0 이면 metric 미설정.
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 120
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Pods
+          value: 2
+          periodSeconds: 30
+
+# ── PodDisruptionBudget ──
+# replicaCount >= 2 일 때만 의미. minAvailable 2 — voluntary 중단 (node drain 등) 시
+# 검색 가용성 보장.
+pdb:
+  enabled: false
+  minAvailable: 2
+
+# ── NetworkPolicy ──
+# default OFF. 운영은 enable + ingress namespace / Kafka / OpenSearch / Postgres 만 허용.
+networkPolicy:
+  enabled: false
+  # ingress 트래픽 출처 — 보통 ingress controller namespace label.
+  ingressNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: ingress-nginx
+  # 외부 의존 ports — egress 화이트리스트.
+  egress:
+    postgresPort: 5432
+    opensearchPort: 9200
+    kafkaPort: 9092
+    redisPort: 6379
+    # DNS 는 항상 허용해야 의존 hostname resolve 가능.
+    dnsPort: 53
+
+# ── Pod 메타데이터 ──
+# Prometheus scrape — actuator/prometheus.
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8080"
+  prometheus.io/path: "/actuator/prometheus"
+podLabels: {}
+
+# scheduling
+nodeSelector: {}
+tolerations: []
+affinity: {}
