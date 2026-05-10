@@ -67,6 +67,25 @@ class SynonymGroupTest {
     }
 
     @Test
+    void term_안에_LF_있으면_예외() {
+        // JPA 어댑터가 \n 을 term 구분자로 직렬화하므로, term 안의 \n 이 그대로 통과되면 한 term 이
+        // 두 term 으로 split 된 채 DB → 도메인으로 round-trip 된다.
+        assertThatThrownBy(() -> SynonymGroup.create(
+                List.of("first\nsecond", "c"), SynonymDirection.BIDIRECTIONAL, NOW, "op"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("구분자");
+    }
+
+    @Test
+    void term_안에_CR_있으면_예외() {
+        // 운영자가 Windows 메모장 등에서 복사 붙여넣기 시 \r 이 섞일 수 있어 같이 차단.
+        assertThatThrownBy(() -> SynonymGroup.create(
+                List.of("first\rsecond", "c"), SynonymDirection.BIDIRECTIONAL, NOW, "op"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("구분자");
+    }
+
+    @Test
     void term_길이_상한_초과시_예외() {
         String tooLong = "a".repeat(SynonymGroup.MAX_TERM_LENGTH + 1);
         assertThatThrownBy(() -> SynonymGroup.create(
