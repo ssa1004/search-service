@@ -1,0 +1,16 @@
+# helm package 시 제외 — helm create 표준.
+.DS_Store
+.git/
+.gitignore
+.bzr/
+.hg/
+.svn/
+*.swp
+*.tmp
+*.bak
+*.orig
+*~
+.idea/
+.vscode/
+.project
+.idea/

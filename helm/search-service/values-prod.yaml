@@ -1,0 +1,129 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Production override.
+#  helm install search-service ./helm/search-service -f values.yaml -f values-prod.yaml
+#
+# values.yaml 의 default 를 다음만 덮어쓴다.
+#  - replicaCount 3 + HPA 활성
+#  - ingress TLS + path 두 갈래 (search / admin)
+#  - networkPolicy 활성
+#  - opensearch credentials 는 외부 secret 참조 (existingSecret)
+#  - podAntiAffinity 로 같은 node 회피
+#  - logging level 조정
+# ─────────────────────────────────────────────────────────────────────────────
+
+replicaCount: 3
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 1Gi
+  limits:
+    cpu: 2000m
+    memory: 2Gi
+
+config:
+  springProfilesActive: "prod"
+  searchEngine: "elasticsearch"
+  kafkaEnabled: "true"
+
+postgres:
+  host: "postgres-primary.data.svc.cluster.local"
+  port: 5432
+  database: "search"
+  user: "search"
+
+opensearch:
+  endpoint: "https://opensearch.data.svc.cluster.local:9200"
+  # 운영은 외부에서 만든 secret 을 참조 — helm 으로 평문 commit 금지.
+  # ExternalSecrets / sealed-secrets / vault 가 만든 secret 의 키 두 개 (username, password)
+  # 가 컨테이너 env (OPENSEARCH_USERNAME, OPENSEARCH_PASSWORD) 로 들어간다.
+  auth:
+    enabled: true
+    existingSecret: "search-service-opensearch"
+    usernameKey: "username"
+    passwordKey: "password"
+
+kafka:
+  bootstrap: "kafka-bootstrap.data.svc.cluster.local:9092"
+
+redis:
+  enabled: false
+
+# 운영은 ExternalSecrets 가 secret 을 만들어줌. helm 의 secret create=false 유지.
+secret:
+  create: false
+  name: "search-service-postgres"
+  postgres:
+    passwordKey: "postgres-password"
+
+# ── Ingress ──
+# /api/v1/search/* — 사용자 검색 traffic.
+# /api/v1/admin/* — 운영자 endpoint. annotations 로 IP allow-list 분리 권장.
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/proxy-body-size: "1m"
+    # admin path 는 별도 server block 으로 분리하고 싶다면 별 ingress object 로 쪼개는 게 깔끔.
+    # 본 chart 는 단일 host + 두 path 만 정의 — 운영 환경 정책에 맞춰 override.
+  hosts:
+    - host: search.example.com
+      paths:
+        - path: /api/v1/search
+          pathType: Prefix
+        - path: /api/v1/admin
+          pathType: Prefix
+  tls:
+    - secretName: search-service-tls
+      hosts:
+        - search.example.com
+
+# ── HPA ──
+hpa:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 12
+  targetCPUUtilizationPercentage: 60
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 120
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Pods
+          value: 2
+          periodSeconds: 30
+
+# ── PDB ──
+pdb:
+  enabled: true
+  minAvailable: 2
+
+# ── NetworkPolicy ──
+networkPolicy:
+  enabled: true
+  ingressNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: ingress-nginx
+  egress:
+    postgresPort: 5432
+    opensearchPort: 9200
+    kafkaPort: 9092
+    redisPort: 6379
+    dnsPort: 53
+
+# 같은 node 에 몰리지 않게 — voluntary 중단 (node drain) 시 한꺼번에 죽는 시나리오 회피.
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: search-service
