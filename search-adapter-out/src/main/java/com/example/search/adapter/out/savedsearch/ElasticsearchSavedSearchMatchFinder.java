@@ -25,8 +25,10 @@ import java.util.List;
 /**
  * SavedSearch 의 query 를 ES 에 다시 던져 since 이후 신규 매치만 반환.
  *
- * <p>{@code updatedAt >= since} filter 를 자동 합성 — 색인 시점 기준 신규 / 변경 문서만 후보. id 만
- * 가져오기 위해 {@code _source: false} + {@code stored_fields: _id}.</p>
+ * <p>{@code updatedAt > since} (strict) filter 를 자동 합성 — since 는 직전 사이클이 이미 스캔
+ * 완료한 시점이므로 같은 ms 의 문서를 다음 사이클에서 다시 잡지 않게 한다 (gte 였다면 경계의
+ * 문서가 두 사이클 모두 매치되어 중복 알림 발행). id 만 가져오기 위해 {@code _source: false} +
+ * {@code stored_fields: _id}.</p>
  *
  * <p>본 어댑터는 {@link com.example.search.adapter.out.elasticsearch.ElasticsearchSearchEngineAdapter}
  * 와 다르게 facet / boost / sort 를 적용하지 않음 — 알림 후보 product 만 빠르게 식별하면 충분.</p>
@@ -54,10 +56,11 @@ public class ElasticsearchSavedSearchMatchFinder implements SavedSearchMatchFind
             for (FilterCriterion f : sq.filters()) {
                 b.filter(toFilterQuery(f));
             }
-            // since filter — updatedAt >= since.
+            // since filter — updatedAt > since (strict). 같은 시점 문서가 다음 사이클에서
+            // 다시 매치되어 알림이 두 번 가는 경계 사례 방지.
             b.filter(Query.of(q2 -> q2.range(RangeQuery.of(rq -> rq.date(d -> d
                     .field(UPDATED_AT_FIELD)
-                    .gte(since.toString()))))));
+                    .gt(since.toString()))))));
             return b;
         }));
 
