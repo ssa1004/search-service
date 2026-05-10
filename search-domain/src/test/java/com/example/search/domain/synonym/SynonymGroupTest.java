@@ -84,6 +84,24 @@ class SynonymGroupTest {
     }
 
     @Test
+    void terms_에_같은_값이_두번_있으면_예외() {
+        assertThatThrownBy(() -> SynonymGroup.create(
+                List.of("조던1", "조던1"), SynonymDirection.BIDIRECTIONAL, NOW, "op"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("중복 term");
+    }
+
+    @Test
+    void terms_가_대소문자만_다른_경우도_중복으로_거부() {
+        // ko_standard analyzer 의 lowercase 필터를 거치면 같은 토큰이 됨 — 분석 비용 낭비.
+        assertThatThrownBy(() -> SynonymGroup.create(
+                List.of("Air Jordan 1", "air jordan 1"),
+                SynonymDirection.BIDIRECTIONAL, NOW, "op"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("중복 term");
+    }
+
+    @Test
     void terms_는_immutable_방어복사() {
         java.util.ArrayList<String> mutable = new java.util.ArrayList<>(List.of("a", "b"));
         SynonymGroup g = SynonymGroup.create(mutable, SynonymDirection.BIDIRECTIONAL, NOW, "op");
