@@ -288,10 +288,88 @@ curl -X POST http://localhost:8080/api/v1/admin/index/reindex \
 
 - `infrastructure/Dockerfile`: multi-stage 빌드 (JDK 21 → JRE 21), non-root, ZGC
 - `infrastructure/docker-compose.yml`: 로컬 통합 환경 (postgres, ES, Kibana, Kafka, Kafka UI)
+- `infrastructure/docker-compose.integration.yml`: portfolio set 통합 시연 — 본 service +
+  auth-stub + notification-hub-stub
 - `infrastructure/k8s/`: PSS restricted, HPA (CPU 60% → 3..12), PDB (minAvailable 2),
   resource limits, readonly root filesystem
 - `.github/workflows/ci.yml`: workflow_dispatch — gradle check + integrationTest +
   Docker build (push 없음)
+
+## Portfolio Set 통합
+
+이 저장소는 8개 백엔드 저장소가 한 시스템처럼 동작하도록 묶인 포트폴리오 셋의 한
+구성 요소입니다. profile 인덱스: <https://github.com/ssa1004/ssa1004>
+
+| 저장소 | 역할 | search-service 와의 관계 |
+|---|---|---|
+| `auth-service` | OAuth2 / OIDC IdP — JWT 발행 + JWK 노출 | 사용자 / 서비스 호출 시 검증할 JWT 의 issuer (JWK Set 소비) |
+| `resell-orderbook` | 한정판 리셀 거래소 | 거래 완료된 product 변경을 CDC `product.changes` 로 발사 → 본 service 가 색인 |
+| `billing-platform` | B2B SaaS 결제 / 청구 / 정산 | 결제 결과로 status 가 바뀐 product 변경을 CDC 로 발사 → 색인 |
+| `gpu-job-orchestrator` | GPU job 관리 백엔드 | 인접 도메인 — 당장 직접 통합점은 없으나 같은 운영 환경 공유 |
+| `notification-hub` | 다채널 알림 발송 hub (mail / push / slack) | SavedSearch 매치 시 본 service 가 발사하는 `search.alert.fired` 의 consumer |
+| `security-log-search` | SIEM (보안 로그 정규화 + 검색 + 알람) | 본 service 의 admin endpoint audit log 의 sink |
+| `mini-shop-observability` | 자체 Spring observability 모듈 + MSA 플레이그라운드 | tracing / metric 라이브러리 컨벤션 공유 |
+| `search-service` | (본 저장소) commerce 상품 검색 백엔드 | 위 도메인 변경의 색인 + SavedSearch 매치 알림 |
+
+### 통합 흐름
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as 사용자
+    participant Auth as auth-service<br/>(JWK Set)
+    participant API as search-service<br/>REST
+    participant ES as Elasticsearch
+    participant Sched as SavedSearch<br/>스케줄러 (5분)
+    participant K as Kafka<br/>(search.alert.fired)
+    participant Hub as notification-hub
+
+    U->>Auth: 1. 로그인 → access JWT 수령
+    U->>API: 2. POST /api/v1/search/products<br/>(Authorization: Bearer JWT)
+    API->>Auth: 3. JWK Set 조회 (1분 캐시)
+    API->>API: 4. JWT 서명 / exp / iss 검증
+    API->>ES: 5. function_score query (boost = popularity + freshness)
+    ES-->>API: hits + aggregations
+    API-->>U: 6. 검색 결과 + facet 분포
+
+    Note over U,Hub: ── SavedSearch 등록 → 5분 cron → 매치 → 알림 ──
+    U->>API: 7. SavedSearch 등록 (keyword + filter + notifyChannel=Kafka)
+    Sched->>ES: 8. 5분 주기로 cursor 이후 신규 매치 평가
+    Sched->>K: 9. SavedSearchAlert 발행 (matchedProductIds)
+    K->>Hub: 10. consume → 사용자 채널 fan-out (push / mail / slack)
+```
+
+> 본 저장소의 REST 컨트롤러는 현 단계에서 JWT 를 직접 검증하지 않습니다 (별도 ADR
+> 으로 정리 예정). 위 다이어그램의 (3) (4) 단계는 portfolio set 에서 JWT 통합 시 본
+> service 가 진입할 위치를 표시한 것이며, 실제 검증은 `notification-hub` / `auth-service`
+> 등 이미 OAuth2 resource-server 가 적용된 인접 service 에서 가동 중입니다.
+
+### 시연 — `docker-compose.integration.yml`
+
+전 8 레포를 같이 띄우지 않고도, stub 으로 cross-repo 흐름만 닫아 한 호스트에서 시연
+가능한 compose 파일을 제공합니다.
+
+- `infrastructure/docker-compose.integration.yml`
+  - `search-service` 본체 + Postgres + Elasticsearch (nori) + Kafka
+  - `auth-stub` — `auth-service` 의 JWK Set 만 정적으로 노출 (nginx — `/.well-known/jwks.json`,
+    `/oauth2/jwks`)
+  - `notification-hub-stub` — `search.alert.fired` topic 을 stdout 으로 echo 하는 컨슈머
+    컨테이너. 실제 hub 는 본 메시지를 받아 push / mail / slack 으로 fan-out
+  - `domain-producer` — 시연 스크립트가 `docker exec` 로 CDC 이벤트 / SavedSearchAlert 를
+    발사할 때 사용하는 idle 컨테이너 (kafka client + curl 만 있으면 충분)
+
+- `scripts/integration-demo.sh` — 위 compose 를 띄우고 다음 한 사이클을 stdout 으로 확인:
+  1. mock JWT 발급 (auth-stub 의 JWK 와 짝지은 평문 RS256 토큰)
+  2. sample product 색인 → 검색 → 결과 확인
+  3. SavedSearchAlert 메시지 발행 → notification-hub-stub 가 받는 것까지
+
+```bash
+docker compose -f infrastructure/docker-compose.integration.yml up -d --build
+./scripts/integration-demo.sh
+```
+
+cross-repo 통합은 어디까지나 *스펙 시연* 용입니다. 실제 운영에서는 각 저장소를 별도
+배포하고 Kubernetes Service / Kafka cluster 를 매개로 연결합니다.
 
 ## 향후 개선 사항
 
@@ -300,3 +378,4 @@ curl -X POST http://localhost:8080/api/v1/admin/index/reindex \
 - Learning-to-Rank (LTR) — 클릭 / 구매 / dwell time 기반 학습 모델
 - 운영자 대시보드 UI — 현재의 admin REST API (analytics / synonyms / DLT replay) 위에 화면
 - SavedSearch 알림 빈도 조절 — 한 사용자 단위 시간 N회 이상이면 통합
+- REST 진입점 JWT 검증 활성화 — 위 통합 흐름의 (3) (4) 단계를 정식 코드로 강제
