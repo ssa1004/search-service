@@ -43,6 +43,6 @@
   (ADR-0005).
 
 ## 다시 검토할 시점
-- 한국어 형태소 분석기 (`nori`) 가 필요할 때 — `ko_standard` 자리에 `nori_tokenizer` 로
-  교체. (현재는 standard 로 시작 — 영문 브랜드명 위주의 도메인 데이터로는 일단 충분)
+- 한국어 형태소 분석은 ADR-0015 에서 nori + user_dictionary 로 적용 — `ko_standard` 가 그
+  결과를 반영한다.
 - 자동완성을 ES `completion suggester` 로 옮길 때 (ADR-0007).

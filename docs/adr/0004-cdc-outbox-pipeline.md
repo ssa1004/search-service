@@ -45,8 +45,7 @@
 - 운영 부담 작음 — Debezium connector 클러스터 / Schema Registry 운영이 없음.
 - 처리 latency 가 polling interval (5초) 에 묶임. 실시간성이 더 필요하면 interval 줄이거나
   Debezium 도입.
-- outbox 테이블이 무한 누적되면 비대화 — 운영 정리 작업 (published_at < NOW() - 7d 삭제)
-  필요.
+- outbox 테이블이 무한 누적되면 비대화 — 별도 retention 스케줄로 정리 (ADR-0014).
 
 ## 다시 검토할 시점
 - 검색 결과 stale 의 SLA 가 1초 이내로 강해질 때 — Debezium 도입.
