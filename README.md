@@ -269,12 +269,12 @@ curl -X POST http://localhost:8080/api/v1/admin/index/reindex \
 
 | 모듈 | 단위 테스트 | 검증 |
 |---|---|---|
-| domain | 53 | Money, Product, SearchQuery, IndexDocument, FacetSpec, SynonymGroup, SavedSearch, SearchEvent, NotifyChannel, ClickThroughRate invariant |
-| application | 35 | use case 들 (mockito) — 검색 / 인덱싱 / 동의어 / 저장검색 / 분석 |
+| domain | 57 | Money, Product, SearchQuery, IndexDocument, FacetSpec, SynonymGroup, SavedSearch, SearchEvent, NotifyChannel, ClickThroughRate invariant |
+| application | 36 | use case 들 (mockito) — 검색 / 인덱싱 / 동의어 / 저장검색 / 분석 |
 | adapter-out | 27 | InMemorySearchEngineAdapter, Levenshtein, ProductDtoMapper, OutboxRetentionJob, ResilientSearchClient, analytics writer / reader |
 | adapter-in | 9 | SearchRequestMapper, SearchController slice (MockMvc) |
-| bootstrap | 12 | Spring 컨텍스트 부팅, HikariPool config, ApplicationReadinessCoordinator, CdcErrorHandler, analytics integration |
-| e2e-tests | 2 + Testcontainers IT | 메모리 e2e full flow + nori analyzer IT + Elasticsearch search IT (`@Tag("integration")`) |
+| bootstrap | 15 | Spring 컨텍스트 부팅, HikariPool config, ApplicationReadinessCoordinator, CdcErrorHandler, analytics integration |
+| e2e-tests | 3 + 5 IT | 메모리 e2e full flow + nori analyzer IT + Elasticsearch search IT (`@Tag("integration")`) |
 
 ## 운영 모드 (`prod` profile)
 

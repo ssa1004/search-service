@@ -150,7 +150,7 @@ ingress:
   hosts:
     - host: search.example.com
       paths:
-        # /api/v1/search/* — 사용자 검색 trafficl
+        # /api/v1/search/* — 사용자 검색 traffic.
         - path: /api/v1/search
           pathType: Prefix
         # /api/v1/admin/* — 운영자 endpoint (동의어 hot reload, reindex, DLT replay, analytics).
