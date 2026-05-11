@@ -1,5 +1,11 @@
 # Search Service
 
+[![CI](https://github.com/ssa1004/search-service/actions/workflows/ci.yml/badge.svg)](https://github.com/ssa1004/search-service/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Java 21](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.org/projects/jdk/21/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4-6DB33F.svg)](https://spring.io/projects/spring-boot)
+[![Elasticsearch](https://img.shields.io/badge/Elasticsearch-8.15-005571.svg)](https://www.elastic.co/elasticsearch)
+
 commerce 상품 검색 서비스의 백엔드입니다. 키워드 검색, 자동완성, faceted filter, 사용자
 검색 클릭 로그 기반 boost (function_score), CDC 인덱싱 파이프라인, 운영 중 무중단 reindex
 (alias swap) 를 제공합니다.
