@@ -39,7 +39,7 @@ class ApplySynonymsToIndexServiceTest {
         int applied = service.apply();
 
         assertThat(applied).isEqualTo(2);
-        ArgumentCaptor<List<SynonymGroup>> captor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<SynonymGroup>> captor = ArgumentCaptor.captor();
         verify(updater).reload(captor.capture());
         assertThat(captor.getValue()).containsExactly(g1, g2);
     }

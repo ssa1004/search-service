@@ -10,6 +10,8 @@ import com.example.search.domain.savedsearch.SavedSearchId;
  */
 public class SavedSearchNotOwnedException extends RuntimeException {
 
+    private static final long serialVersionUID = 1L;
+
     public SavedSearchNotOwnedException(String ownerId, SavedSearchId id) {
         super("SavedSearch %s 는 owner %s 의 소유가 아님".formatted(id.value(), ownerId));
     }
