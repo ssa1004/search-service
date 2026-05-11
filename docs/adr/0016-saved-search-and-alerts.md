@@ -33,7 +33,7 @@ status            (ACTIVE / PAUSED / DELETED)
 
 ### 평가 스케줄러
 
-`EvaluateSavedSearchesScheduler` — 5분마다 실행.
+`SavedSearchEvaluatorJob` — 5분마다 실행.
 
 흐름:
 
