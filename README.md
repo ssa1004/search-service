@@ -282,6 +282,29 @@ curl -X POST http://localhost:8080/api/v1/admin/index/reindex \
 | bootstrap | 15 | Spring 컨텍스트 부팅, HikariPool config, ApplicationReadinessCoordinator, CdcErrorHandler, analytics integration |
 | e2e-tests | 3 + 5 IT | 메모리 e2e full flow + nori analyzer IT + Elasticsearch search IT (`@Tag("integration")`) |
 
+## Load test
+
+`load/k6/` 에 검색 endpoint 부하 시나리오 5종 (k6) — 단순 RPS 가 아닌 *검색 특유의 비용*
+을 본다.
+
+| 시나리오 | endpoint | 측정 |
+|---|---|---|
+| `search-simple` | `GET /api/v1/search/products?q=` | 단순 검색 latency, 500 req/s |
+| `search-with-filters` | `POST /api/v1/search/products` (filter+facet+sort) | query DSL 비용, 200 req/s |
+| `saved-search-create` | `POST /api/v1/saved-searches` | write throughput, 0 → 50 VU |
+| `cursor-pagination` | `GET /api/v1/search/products?cursor=` | cursor decoding invariant |
+| `synonym-hot-reload` | `POST /api/v1/admin/synonyms/apply` 직후 검색 | cache invalidation spike |
+
+```bash
+# 로컬 k6 + 메모리 모드 부팅
+SEARCH_ENGINE=memory ./gradlew :search-bootstrap:bootRun &
+brew install k6
+k6 run load/k6/scenarios/search-simple.js
+```
+
+thresholds 와 커스텀 metric (`facet_compute_ms`, `cursor_decode_error`,
+`first_query_after_reload_latency_ms` 등) 상세는 [`load/README.md`](load/README.md).
+
 ## 운영 모드 (`prod` profile)
 
 - PostgreSQL, Elasticsearch, Kafka 실제 사용 (`SEARCH_ENGINE=elasticsearch`,
