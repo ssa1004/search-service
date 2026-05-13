@@ -20,15 +20,27 @@ public final class SearchDtos {
     private SearchDtos() {
     }
 
+    /** 검색 키워드 길이 상한 — 비정상적으로 긴 입력의 multi_match 비용 폭증 방지. */
+    public static final int MAX_KEYWORD_LENGTH = 200;
+
+    /** 한 요청의 filter 수 상한 — bool query 의 must/filter 절 폭증으로 인한 메모리 / 분석 비용 보호. */
+    public static final int MAX_FILTERS = 20;
+
+    /** 한 요청의 facet 수 상한 — aggregation 폭증으로 인한 메모리 보호 (ADR-0008 참고). */
+    public static final int MAX_FACETS = 10;
+
     public record SearchRequest(
-            String keyword,
-            List<FilterDto> filters,
-            List<FacetSpecDto> facets,
+            @Size(max = MAX_KEYWORD_LENGTH) String keyword,
+            @Size(max = MAX_FILTERS) List<FilterDto> filters,
+            @Size(max = MAX_FACETS) List<FacetSpecDto> facets,
             SortDto sort,
             @Min(0) int page,
             @Min(1) @Max(100) int size
     ) {
     }
+
+    /** 단일 filter 의 terms values 상한 — terms 필터가 수천 값을 받아 ES 메모리 폭주하는 사례 차단. */
+    public static final int MAX_TERMS_VALUES = 100;
 
     /**
      * 4가지 필터 form 을 DTO 차원에서 표현. {@code op} 으로 분기하고, 각 op 별 필요한 필드만 채워진다.
@@ -44,7 +56,7 @@ public final class SearchDtos {
             @NotNull String field,
             @NotNull String op,
             String value,
-            List<String> values,
+            @Size(max = MAX_TERMS_VALUES) List<String> values,
             Long from,
             Boolean fromInclusive,
             Long to,

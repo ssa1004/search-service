@@ -52,4 +52,19 @@ class SearchQueryTest {
         Page p = new Page(2, 20);
         assertThat(p.from()).isEqualTo(40);
     }
+
+    @Test
+    void Page_deep_pagination_상한_초과_금지() {
+        // (number + 1) * size = (100 + 1) * 100 = 10100 > MAX_WINDOW (10000)
+        assertThatThrownBy(() -> new Page(100, 100))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("deep pagination");
+    }
+
+    @Test
+    void Page_deep_pagination_경계_허용() {
+        // (number + 1) * size = (99 + 1) * 100 = 10000 == MAX_WINDOW. 허용.
+        Page p = new Page(99, 100);
+        assertThat(p.from()).isEqualTo(9900);
+    }
 }
