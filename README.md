@@ -379,7 +379,7 @@ commit 하지 않기 위해 `opensearch.auth.existingSecret` 와 `secret.name` (
 | 저장소 | 역할 | search-service 와의 관계 |
 |---|---|---|
 | `auth-service` | OAuth2 / OIDC IdP — JWT 발행 + JWK 노출 | 사용자 / 서비스 호출 시 검증할 JWT 의 issuer (JWK Set 소비) |
-| `resell-orderbook` | 한정판 리셀 거래소 | 거래 완료된 product 변경을 CDC `product.changes` 로 발사 → 본 service 가 색인 |
+| `bid-ask-marketplace` | 한정판 리셀 거래소 | 거래 완료된 product 변경을 CDC `product.changes` 로 발사 → 본 service 가 색인 |
 | `billing-platform` | B2B SaaS 결제 / 청구 / 정산 | 결제 결과로 status 가 바뀐 product 변경을 CDC 로 발사 → 색인 |
 | `gpu-job-orchestrator` | GPU job 관리 백엔드 | 인접 도메인 — 당장 직접 통합점은 없으나 같은 운영 환경 공유 |
 | `notification-hub` | 다채널 알림 발송 hub (mail / push / slack) | SavedSearch 매치 시 본 service 가 발사하는 `search.alert.fired` 의 consumer |
