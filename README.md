@@ -384,7 +384,7 @@ commit 하지 않기 위해 `opensearch.auth.existingSecret` 와 `secret.name` (
 | `gpu-job-orchestrator` | GPU job 관리 백엔드 | 인접 도메인 — 당장 직접 통합점은 없으나 같은 운영 환경 공유 |
 | `notification-hub` | 다채널 알림 발송 hub (mail / push / slack) | SavedSearch 매치 시 본 service 가 발사하는 `search.alert.fired` 의 consumer |
 | `security-log-search` | SIEM (보안 로그 정규화 + 검색 + 알람) | 본 service 의 admin endpoint audit log 의 sink |
-| `mini-shop-observability` | 자체 Spring observability 모듈 + MSA 플레이그라운드 | tracing / metric 라이브러리 컨벤션 공유 |
+| `commerce-ops` | 자체 Spring observability 모듈 + MSA 플레이그라운드 | tracing / metric 라이브러리 컨벤션 공유 |
 | `search-service` | (본 저장소) commerce 상품 검색 백엔드 | 위 도메인 변경의 색인 + SavedSearch 매치 알림 |
 
 ### 통합 흐름
