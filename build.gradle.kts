@@ -3,6 +3,8 @@ plugins {
     java
     id("org.springframework.boot") version "3.4.13" apply false
     id("io.spring.dependency-management") version "1.1.7" apply false
+    // Kotlin 은 도메인 모듈만 사용 — 루트에서는 버전만 고정하고 apply 는 모듈이 직접.
+    kotlin("jvm") version "2.1.0" apply false
 }
 
 allprojects {
