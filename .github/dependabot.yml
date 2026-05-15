@@ -1,0 +1,29 @@
+version: 2
+updates:
+  # Gradle 의존성 — 멀티 모듈이라 build.gradle.kts 가 여러 개지만 dependabot 이
+  # 디렉토리 트리를 재귀로 스캔한다.
+  - package-ecosystem: gradle
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    groups:
+      # patch / minor 는 한 PR 로 묶어 노이즈를 줄인다. major 는 개별 PR.
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  # GitHub Actions — workflow 에서 쓰는 action 버전 (checkout, setup-java 등).
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - github-actions
