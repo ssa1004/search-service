@@ -50,12 +50,15 @@ public class InMemorySearchEngineAdapter implements SearchEnginePort, IndexWrite
         // boost rule 의 단순 가산 — popularityWeight * log(clickCount + 2). 신상품 decay 는 생략
         // (메모리 구현은 스모크 테스트용이라 정확한 점수가 중요하지 않음).
         var rule = command.boostRule();
+        // 점수 desc 정렬 + 동점 시 id asc tie-breaker — ES 어댑터와 같은 정책. tie-breaker 가
+        // 없으면 ConcurrentHashMap 순회 순서에 따라 페이지 간 문서가 중복/누락될 수 있다.
         List<SearchResult.Hit> all = filtered.stream()
                 .map(d -> new SearchResult.Hit(
                         d.id(), d.name(), d.brand(), d.category(),
                         d.priceWon(), d.stockQuantity(), d.status(),
                         rule.popularityWeight() * Math.log(d.clickCount() + 2)))
-                .sorted(Comparator.comparingDouble(SearchResult.Hit::score).reversed())
+                .sorted(Comparator.comparingDouble(SearchResult.Hit::score).reversed()
+                        .thenComparing(h -> h.id().value()))
                 .toList();
 
         int from = sq.page().from();
