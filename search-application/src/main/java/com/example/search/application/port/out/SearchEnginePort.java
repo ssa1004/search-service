@@ -14,7 +14,7 @@ import java.util.List;
  * <p>application 모듈은 ES SDK 를 직접 알지 못한다. boost rule 도 도메인 표현 그대로 받아 adapter
  * 가 function_score 로 번역.</p>
  *
- * <p>Resilience4j Circuit Breaker + Retry 가 이 port 의 운영 구현체에 적용된다 (ADR-0008
+ * <p>Resilience4j Circuit Breaker + Retry 가 이 port 의 운영 구현체에 적용된다 (ADR-0012
  * 참조).</p>
  */
 public interface SearchEnginePort {
