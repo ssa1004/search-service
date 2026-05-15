@@ -6,17 +6,16 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: search-service
-  description: "검색 백엔드 — OpenSearch 기반 hexagonal. Saved Search alert, synonym dictionary hot reload, cursor pagination, 다국어 analyzer"
+  description: "검색 백엔드 — Elasticsearch 기반 hexagonal. Saved Search alert, synonym dictionary hot reload, 한국어(nori) analyzer"
   annotations:
     github.com/project-slug: ssa1004/search-service
     backstage.io/source-location: url:https://github.com/ssa1004/search-service
   tags:
     - search
-    - opensearch
+    - elasticsearch
     - saved-search
     - synonym
-    - cursor-pagination
-    - multilingual-analyzer
+    - korean-analyzer
     - hexagonal-architecture
   links:
     - url: https://github.com/ssa1004/search-service
@@ -40,7 +39,7 @@ apiVersion: backstage.io/v1alpha1
 kind: API
 metadata:
   name: search-rest
-  description: "검색 / 자동완성 / saved search / synonym 관리 REST API (OpenSearch 백엔드)"
+  description: "검색 / 자동완성 / 관련검색어 / synonym 관리 REST API (Elasticsearch 백엔드)"
   annotations:
     github.com/project-slug: ssa1004/search-service
 spec:
@@ -48,83 +47,99 @@ spec:
   lifecycle: experimental
   owner: user:ssa1004
   system: ssa1004-portfolio
+  # 요약 스펙 — 전체 OpenAPI 는 springdoc 가 런타임에 /swagger-ui.html 로 생성한다.
   definition: |
     openapi: 3.0.3
     info:
       title: Search Service REST API
       version: 1.0.0
       description: |
-        OpenSearch 기반 검색 백엔드.
-        다국어 analyzer + synonym hot reload + cursor pagination + saved search alert 지원.
+        Elasticsearch 기반 검색 백엔드.
+        한국어(nori) analyzer + synonym hot reload + saved search alert 지원.
     paths:
-      /api/v1/search:
+      /api/v1/search/products:
+        post:
+          summary: 키워드 검색 (filter + facet + function_score boost)
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    keyword: { type: string }
+                    filters: { type: array, items: { type: object } }
+                    facets: { type: array, items: { type: object } }
+                    sort: { type: object }
+                    page: { type: integer, default: 0 }
+                    size: { type: integer, default: 20 }
+          responses:
+            "200":
+              description: 검색 결과 + facet 분포
+              content:
+                application/json:
+                  schema:
+                    type: object
+                    properties:
+                      totalHits: { type: integer }
+                      took: { type: integer }
+                      hits: { type: array, items: { type: object } }
+                      facets: { type: object }
+      /api/v1/search/autocomplete:
         get:
-          summary: 검색 (cursor pagination)
+          summary: 자동완성 (prefix + edge-ngram)
           parameters:
             - in: query
               name: q
               required: true
               schema: { type: string }
             - in: query
-              name: cursor
-              schema: { type: string }
-            - in: query
-              name: size
-              schema: { type: integer, default: 20 }
-            - in: query
-              name: filter
-              schema: { type: string, description: "field:value AND field:value" }
-          responses:
-            "200":
-              description: 검색 결과
-              content:
-                application/json:
-                  schema:
-                    type: object
-                    properties:
-                      hits:
-                        type: array
-                        items: { type: object }
-                      nextCursor: { type: string }
-                      totalApprox: { type: integer }
-      /api/v1/autocomplete:
-        get:
-          summary: 자동완성 (prefix + edge-ngram)
-          parameters:
-            - in: query
-              name: prefix
-              required: true
-              schema: { type: string }
+              name: limit
+              schema: { type: integer, default: 10 }
           responses:
             "200": { description: 자동완성 후보 }
-      /api/v1/saved-searches:
+      /api/v1/search/related:
+        get:
+          summary: 관련 검색어 (fuzzy — zero-result 회복)
+          parameters:
+            - in: query
+              name: q
+              required: true
+              schema: { type: string }
+            - in: query
+              name: limit
+              schema: { type: integer, default: 5 }
+            - in: query
+              name: maxDistance
+              schema: { type: integer, default: 2 }
+          responses:
+            "200": { description: 관련 키워드 후보 }
+      /api/v1/admin/synonyms:
         post:
-          summary: Saved Search 등록 (주기 평가 + alert)
+          summary: 동의어 그룹 등록 (운영자 — X-Operator-Id 헤더)
+          parameters:
+            - in: header
+              name: X-Operator-Id
+              required: true
+              schema: { type: string }
           requestBody:
             required: true
             content:
               application/json:
                 schema:
                   type: object
-                  required: [query, schedule]
+                  required: [terms, direction]
                   properties:
-                    query: { type: string }
-                    schedule: { type: string, description: cron expression }
-                    notificationChannel: { type: string }
-          responses:
-            "201": { description: saved search 등록 완료 }
-      /api/v1/synonyms:
-        put:
-          summary: synonym dictionary hot reload
-          requestBody:
-            required: true
-            content:
-              application/json:
-                schema:
-                  type: object
-                  properties:
-                    entries:
+                    terms:
                       type: array
-                      items: { type: string, example: "스마트폰, 휴대폰, 핸드폰" }
+                      items: { type: string, example: "스마트폰" }
+                    direction:
+                      type: string
+                      enum: [BIDIRECTIONAL, ONE_WAY]
           responses:
-            "204": { description: reload 완료 }
+            "201": { description: 동의어 그룹 등록 완료 }
+      /api/v1/admin/synonyms/apply:
+        post:
+          summary: 등록된 동의어를 ES 에 적용 (settings update + alias swap)
+          responses:
+            "200": { description: 적용된 그룹 수 }
