@@ -228,10 +228,18 @@ public class ElasticsearchSearchEngineAdapter implements SearchEnginePort {
     }
 
     private void applySort(SearchRequest.Builder rb, SortSpec sort) {
-        if (sort == null) return;
-        rb.sort(s -> s.field(f -> f
-                .field(sort.field())
-                .order(sort.direction() == SortSpec.Direction.ASC ? SortOrder.Asc : SortOrder.Desc)));
+        // 명시 sort 가 있으면 그 필드로, 없으면 _score (function_score 결과) 로 정렬.
+        // 어느 쪽이든 동점일 때 ES 는 순서를 보장하지 않아 페이지 간 문서가 중복/누락될 수 있다
+        // (priceWon 같은 비유일 필드, 또는 _score 동점). _id 를 마지막 tie-breaker 로 항상 덧붙여
+        // 동점 시에도 결정적 순서를 만든다.
+        if (sort != null) {
+            rb.sort(s -> s.field(f -> f
+                    .field(sort.field())
+                    .order(sort.direction() == SortSpec.Direction.ASC ? SortOrder.Asc : SortOrder.Desc)));
+        } else {
+            rb.sort(s -> s.score(sc -> sc.order(SortOrder.Desc)));
+        }
+        rb.sort(s -> s.field(f -> f.field("_id").order(SortOrder.Asc)));
     }
 
     private void applyAggregations(SearchRequest.Builder rb, List<FacetSpec> facets) {

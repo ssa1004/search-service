@@ -98,6 +98,31 @@ class InMemorySearchEngineAdapterTest {
     }
 
     @Test
+    void 점수_동점이면_id_asc_로_결정적_정렬() {
+        // clickCount 가 같으면 boost 점수도 같다 — tie-breaker 가 없으면 페이지 순서가 비결정적.
+        InMemorySearchEngineAdapter tied = new InMemorySearchEngineAdapter();
+        tied.index(IndexDocument.from(product("tie-3", "Tie Runner", "Nike"), 10L));
+        tied.index(IndexDocument.from(product("tie-1", "Tie Runner", "Nike"), 10L));
+        tied.index(IndexDocument.from(product("tie-2", "Tie Runner", "Nike"), 10L));
+
+        SearchProductCommand page0 = new SearchProductCommand(
+                SearchQuery.byKeyword("Tie", new Page(0, 2)),
+                List.of(), BoostRule.defaults());
+        SearchProductCommand page1 = new SearchProductCommand(
+                SearchQuery.byKeyword("Tie", new Page(1, 2)),
+                List.of(), BoostRule.defaults());
+
+        List<String> first = tied.search(page0).hits().stream()
+                .map(h -> h.id().value()).toList();
+        List<String> second = tied.search(page1).hits().stream()
+                .map(h -> h.id().value()).toList();
+
+        // 동점이라도 id asc 로 안정 정렬 → 페이지 경계에서 중복/누락 없음.
+        assertThat(first).containsExactly("tie-1", "tie-2");
+        assertThat(second).containsExactly("tie-3");
+    }
+
+    @Test
     void incrementClickCount_은_누적() {
         adapter.incrementClickCount(ProductId.of("p-3"));
         adapter.incrementClickCount(ProductId.of("p-3"));
