@@ -1,10 +1,22 @@
 // Outbound adapter — Elasticsearch 클라이언트 + Postgres source + Kafka producer/consumer + CDC indexer worker.
+//
+// Kotlin 으로 마이그레이션. JPA entity 는 plugin.jpa 가 no-arg ctor 를 합성하고
+// plugin.spring 이 @Component / @Service / @Repository 클래스를 자동 open 처리한다.
+// allOpen 으로 @MappedSuperclass / @Embeddable 도 동일하게 처리.
 plugins {
     `java-library`
+    kotlin("jvm")
+    kotlin("plugin.spring") version "2.1.0"
+    kotlin("plugin.jpa") version "2.1.0"
 }
 
 dependencies {
     implementation(project(":search-application"))
+
+    // Spring Data 가 Kotlin repository interface 의 PreferredConstructorDiscoverer 에서
+    // kotlin.reflect.full.KClasses 를 호출 — runtime 에 kotlin-reflect 가 없으면
+    // NoClassDefFoundError 로 bean 생성이 실패한다.
+    implementation(kotlin("reflect"))
 
     // Persistence — source DB (Postgres) + outbox.
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
@@ -42,4 +54,16 @@ dependencies {
     testImplementation("org.testcontainers:elasticsearch")
     testImplementation("org.testcontainers:postgresql")
     testImplementation("org.testcontainers:kafka")
+}
+
+kotlin {
+    jvmToolchain(21)
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    compilerOptions {
+        // Java 호출자가 record 스타일 접근자 (foo.value()) 를 쓰므로 @JvmRecord 활성 필수.
+        // 인터페이스 default 메서드도 Java 측에 그대로 노출되도록 -Xjvm-default=all.
+        freeCompilerArgs.add("-Xjvm-default=all")
+    }
 }
