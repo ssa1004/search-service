@@ -38,7 +38,7 @@ dependencies {
 
     // ShedLock — 멀티 인스턴스에서 @Scheduled 중복 실행 방지 (outbox retention 등).
     // OutboxRetentionJob 이 @SchedulerLock 어노테이션을 사용하므로 api 로 노출.
-    api("net.javacrumbs.shedlock:shedlock-spring:5.16.0")
+    api("net.javacrumbs.shedlock:shedlock-spring:7.7.0")
 
     // Messaging — Kafka producer / consumer.
     implementation("org.springframework.kafka:spring-kafka")
