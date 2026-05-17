@@ -1,6 +1,11 @@
 // Spring Boot 진입점. main + 통합 config + Flyway + ES mapping init.
+//
+// Kotlin 으로 마이그레이션. @Configuration / @Component 클래스의 AOP proxy 화를 위해 plugin.spring 으로
+// 자동 open 처리한다. @SpringBootApplication 진입점도 Kotlin top-level fun main + class 패턴.
 plugins {
     java
+    kotlin("jvm")
+    kotlin("plugin.spring") version "2.1.0"
     id("org.springframework.boot")
     id("io.spring.dependency-management")
 }
@@ -10,6 +15,12 @@ dependencies {
     implementation(project(":search-application"))
     implementation(project(":search-adapter-in"))
     implementation(project(":search-adapter-out"))
+
+    // Kotlin runtime — @ConfigurationProperties data class binding 의 PreferredConstructorDiscoverer 가
+    // kotlin.reflect 를 호출한다.
+    implementation(kotlin("reflect"))
+    // Spring Boot Jackson auto config 가 detect 하여 Kotlin data class 의 deserialization 을 지원.
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
     // Bootstrap 자체에서 사용하는 starter 들.
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
@@ -42,6 +53,18 @@ dependencies {
     testImplementation("org.testcontainers:elasticsearch")
     testImplementation("org.testcontainers:postgresql")
     testImplementation("org.testcontainers:kafka")
+}
+
+kotlin {
+    jvmToolchain(21)
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    compilerOptions {
+        // Java 호출자가 record 스타일 접근자 (foo.value()) 를 쓰므로 @JvmRecord 활성 필수.
+        // 인터페이스 default 메서드도 Java 측에 그대로 노출되도록 -Xjvm-default=all.
+        freeCompilerArgs.add("-Xjvm-default=all")
+    }
 }
 
 tasks.named("bootJar") {
