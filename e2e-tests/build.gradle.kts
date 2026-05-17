@@ -1,6 +1,10 @@
 // e2e — Postgres + Kafka + Elasticsearch 통합 시나리오 (Testcontainers).
+//
+// Kotlin 으로 마이그레이션. e2e 테스트 클래스는 mockito-kotlin / kotlin DSL 을 사용하지 않지만 도메인
+// 코드가 Kotlin 으로 전환되어 함께 정렬.
 plugins {
     java
+    kotlin("jvm")
     id("io.spring.dependency-management")
 }
 
@@ -24,4 +28,14 @@ dependencies {
 
     // NoriAnalyzerIT 가 raw REST 호출을 Jackson 으로 파싱.
     testImplementation("com.fasterxml.jackson.core:jackson-databind")
+}
+
+kotlin {
+    jvmToolchain(21)
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    compilerOptions {
+        freeCompilerArgs.add("-Xjvm-default=all")
+    }
 }
