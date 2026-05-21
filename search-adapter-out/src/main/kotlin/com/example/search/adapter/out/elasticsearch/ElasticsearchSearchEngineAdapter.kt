@@ -233,8 +233,8 @@ class ElasticsearchSearchEngineAdapter(
     private fun applySort(rb: SearchRequest.Builder, sort: SortSpec?) {
         // 명시 sort 가 있으면 그 필드로, 없으면 _score (function_score 결과) 로 정렬.
         // 어느 쪽이든 동점일 때 ES 는 순서를 보장하지 않아 페이지 간 문서가 중복/누락될 수 있다
-        // (priceWon 같은 비유일 필드, 또는 _score 동점). _id 를 마지막 tie-breaker 로 항상 덧붙여
-        // 동점 시에도 결정적 순서를 만든다.
+        // (priceWon 같은 비유일 필드, 또는 _score 동점). 문서별 유일한 id 를 마지막 tie-breaker 로
+        // 항상 덧붙여 동점 시에도 결정적 순서를 만든다.
         if (sort != null) {
             rb.sort { s ->
                 s.field { f ->
@@ -245,7 +245,9 @@ class ElasticsearchSearchEngineAdapter(
         } else {
             rb.sort { s -> s.score { sc -> sc.order(SortOrder.Desc) } }
         }
-        rb.sort { s -> s.field { f -> f.field("_id").order(SortOrder.Asc) } }
+        // 메타 필드 _id 는 fielddata 가 비활성 (indices.id_field_data.enabled=false 가 default) 이라
+        // sort 대상이 될 수 없다 — mapping 에 keyword 로 존재하는 id 필드로 정렬한다 (값은 _id 와 동일).
+        rb.sort { s -> s.field { f -> f.field("id").order(SortOrder.Asc) } }
     }
 
     private fun applyAggregations(rb: SearchRequest.Builder, facets: List<FacetSpec>) {
