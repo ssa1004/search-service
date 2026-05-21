@@ -87,14 +87,14 @@ ES 의 synonym graph filter 는 inline 으로 rule 을 받지만 *진실값은 R
 
 ### Reload — close → settings PUT → open
 
-```java
-client.indices().close(c -> c.index(physical));
+```kotlin
+client.indices().close { c -> c.index(physical) }
 try {
-    client.indices().putSettings(p -> p
-            .index(physical)
-            .withJson(new StringReader(settingsJson)));
+    client.indices().putSettings { p ->
+        p.index(physical).withJson(StringReader(settingsJson))
+    }
 } finally {
-    client.indices().open(o -> o.index(physical));
+    client.indices().open { o -> o.index(physical) }
 }
 ```
 

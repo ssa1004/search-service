@@ -48,10 +48,10 @@ status            (ACTIVE / PAUSED / DELETED)
 스케줄러는 ShedLock 으로 *한 인스턴스만* 실행 보장. 두 인스턴스가 동시에 같은 SavedSearch
 를 평가하면 알림 중복 + lastEvaluatedAt race.
 
-```java
-@Scheduled(fixedDelayString = "PT5M")
-@SchedulerLock(name = "evaluateSavedSearches", lockAtMostFor = "PT4M", lockAtLeastFor = "PT30S")
-public void evaluate() { ... }
+```kotlin
+@Scheduled(fixedDelayString = "\${search.savedsearch.evaluate-interval-ms:300000}")
+@SchedulerLock(name = "savedsearch-evaluator", lockAtMostFor = "4m", lockAtLeastFor = "1m")
+fun run() { ... }
 ```
 
 ### 사용자당 한도 — 무한 등록 방지
