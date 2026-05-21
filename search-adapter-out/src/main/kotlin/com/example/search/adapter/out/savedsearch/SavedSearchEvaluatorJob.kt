@@ -18,7 +18,9 @@ import org.springframework.scheduling.annotation.Scheduled
  * 빈 등록은 bootstrap 의 `SavedSearchConfig` 가 책임 — [EvaluateSavedSearchesUseCase]
  * 빈이 존재할 때만 활성 (memory 모드 / kafka 비활성 환경에서 미동작).
  */
-class SavedSearchEvaluatorJob(
+// open: CGLIB AOP proxy 대상 (@Scheduled/@SchedulerLock) — @Bean 등록이라 클래스 레벨
+// 스테레오타입이 없어 plugin.spring allOpen 이 open 처리하지 않는다. Kotlin 클래스는 기본 final.
+open class SavedSearchEvaluatorJob(
     private val useCase: EvaluateSavedSearchesUseCase,
     private val meterRegistry: MeterRegistry
 ) {
@@ -28,7 +30,8 @@ class SavedSearchEvaluatorJob(
         initialDelayString = "\${search.savedsearch.evaluate-initial-delay-ms:60000}"
     )
     @SchedulerLock(name = "savedsearch-evaluator", lockAtMostFor = "4m", lockAtLeastFor = "1m")
-    fun run() {
+    // open: 인터페이스 override 가 아니므로 명시적으로 open — final 메서드는 CGLIB 가 가로채지 못한다.
+    open fun run() {
         try {
             val evaluated = useCase.evaluateAll()
             meterRegistry.counter("savedsearch.evaluator.evaluated").increment(evaluated.toDouble())
