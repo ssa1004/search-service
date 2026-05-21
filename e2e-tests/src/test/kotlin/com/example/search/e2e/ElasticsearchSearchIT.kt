@@ -60,11 +60,6 @@ class ElasticsearchSearchIT {
     @Autowired
     lateinit var properties: SearchIndexProperties
 
-    @BeforeAll
-    fun waitForES() {
-        // ElasticsearchContainer 의 default healthcheck 가 준비 완료까지 대기 — 추가 로직 불필요.
-    }
-
     @Test
     fun `인덱스_생성_indexing_검색_facet`() {
         // 1) 인덱스 생성 (mapping JSON 적용).
@@ -151,6 +146,12 @@ class ElasticsearchSearchIT {
             ImageFromDockerfile("search-service-es-nori-test", false)
                 .withDockerfile(Path.of("..", "docker", "elasticsearch", "Dockerfile"))
                 .get()
+
+        @JvmStatic
+        @BeforeAll
+        fun waitForES() {
+            // ElasticsearchContainer 의 default healthcheck 가 준비 완료까지 대기 — 추가 로직 불필요.
+        }
 
         @JvmStatic
         @DynamicPropertySource
