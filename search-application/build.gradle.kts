@@ -13,7 +13,7 @@ dependencies {
     api(project(":search-domain"))
     api("org.springframework:spring-context")    // @Service, @Component
     api("org.springframework:spring-tx")          // @Transactional
-    api("org.slf4j:slf4j-api")                   // Lombok @Slf4j
+    api("org.slf4j:slf4j-api")                   // LoggerFactory.getLogger
 
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.mockito:mockito-junit-jupiter")
