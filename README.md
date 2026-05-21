@@ -2,7 +2,8 @@
 
 [![CI](https://github.com/ssa1004/search-service/actions/workflows/ci.yml/badge.svg)](https://github.com/ssa1004/search-service/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Java 21](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.org/projects/jdk/21/)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.1-7F52FF.svg)](https://kotlinlang.org)
+[![JDK 21](https://img.shields.io/badge/JDK-21-orange.svg)](https://openjdk.org/projects/jdk/21/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4-6DB33F.svg)](https://spring.io/projects/spring-boot)
 [![Elasticsearch](https://img.shields.io/badge/Elasticsearch-8.15-005571.svg)](https://www.elastic.co/elasticsearch)
 
@@ -12,8 +13,8 @@ commerce 상품 검색 서비스의 백엔드입니다. 키워드 검색, 자동
 
 ## 기술 스택
 
-- **Language**: Java 21 (virtual threads)
-- **Framework**: Spring Boot 3.4.1
+- **Language**: Kotlin 2.1 (JVM 21 — virtual threads)
+- **Framework**: Spring Boot 3.4.13
 - **Source DB**: PostgreSQL 16, Flyway
 - **Search Engine**: Elasticsearch 8.15 (공식 Java Client)
 - **Messaging**: Apache Kafka (CDC topic — `product.changes`)
@@ -165,7 +166,7 @@ graph LR
 | `search-adapter-in` | REST 컨트롤러 (search + admin) + CDC Kafka 컨슈머 + DLT consumer |
 | `search-adapter-out` | Elasticsearch Java Client + JPA + Outbox + CdcOutboxRelay + SavedSearch evaluator + 동의어 sync + analytics writer |
 | `search-bootstrap` | Spring Boot 진입점, Flyway, ES mapping JSON, ShedLock, 모든 빈 등록 |
-| `e2e-tests` | 메모리 모드 e2e + Testcontainers ES IT (Nori, Resilience4j, 검색 flow — `@Tag("integration")`) |
+| `e2e-tests` | 메모리 모드 e2e + Testcontainers ES IT (Nori 분석기, 검색 flow — `@Tag("integration")`) |
 
 ## Use case 와 진입점
 
@@ -275,12 +276,12 @@ curl -X POST http://localhost:8080/api/v1/admin/index/reindex \
 
 | 모듈 | 단위 테스트 | 검증 |
 |---|---|---|
-| domain | 57 | Money, Product, SearchQuery, IndexDocument, FacetSpec, SynonymGroup, SavedSearch, SearchEvent, NotifyChannel, ClickThroughRate invariant |
+| domain | 59 | Money, Product, SearchQuery, IndexDocument, FacetSpec, SynonymGroup, SavedSearch, SearchEvent, NotifyChannel, ClickThroughRate invariant |
 | application | 36 | use case 들 (mockito) — 검색 / 인덱싱 / 동의어 / 저장검색 / 분석 |
-| adapter-out | 27 | InMemorySearchEngineAdapter, Levenshtein, ProductDtoMapper, OutboxRetentionJob, ResilientSearchClient, analytics writer / reader |
+| adapter-out | 28 | InMemorySearchEngineAdapter, Levenshtein, ProductDtoMapper, OutboxRetentionJob, ResilientSearchClient, analytics writer / reader |
 | adapter-in | 9 | SearchRequestMapper, SearchController slice (MockMvc) |
-| bootstrap | 15 | Spring 컨텍스트 부팅, HikariPool config, ApplicationReadinessCoordinator, CdcErrorHandler, analytics integration |
-| e2e-tests | 3 + 5 IT | 메모리 e2e full flow + nori analyzer IT + Elasticsearch search IT (`@Tag("integration")`) |
+| bootstrap | 12 | Spring 컨텍스트 부팅, HikariPool config, ApplicationReadinessCoordinator, CdcErrorHandler, analytics integration |
+| e2e-tests | 2 + 3 IT | 메모리 e2e full flow + nori analyzer IT + Elasticsearch search IT (`@Tag("integration")`) |
 
 ## Load test
 

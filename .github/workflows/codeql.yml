@@ -1,6 +1,6 @@
 name: codeql
 
-# Java SAST — CodeQL 정적 분석. ci.yml 과 분리해 보안 스캔만 독립 실행한다.
+# Kotlin / Java SAST — CodeQL 정적 분석. ci.yml 과 분리해 보안 스캔만 독립 실행한다.
 on:
   workflow_dispatch:
   schedule:

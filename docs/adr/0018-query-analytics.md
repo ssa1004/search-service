@@ -38,10 +38,10 @@ SearchEvent
 `SearchEventRecorder` 를 outbound port 로 두고 `@Async` 어댑터가 별도 thread pool 에서 INSERT.
 검색 응답 thread 가 분석 저장을 기다리지 않는다.
 
-```java
+```kotlin
 @Async("searchAnalyticsExecutor")
-@Transactional(propagation = REQUIRES_NEW)
-public void record(SearchEvent event) { repository.save(...); }
+@Transactional(propagation = Propagation.REQUIRES_NEW)
+override fun record(event: SearchEvent) { repository.save(...) }
 ```
 
 전용 pool — core 4 / max 8 / queue 1000 + `DiscardOldestPolicy`. 분석은 표본 기반이라 일부 손실
@@ -66,9 +66,9 @@ public void record(SearchEvent event) { repository.save(...); }
 H2 / Postgres 양쪽 호환을 위해 SQL `percentile_cont` 대신 정렬된 `latency_ms` 리스트를 받아
 nearest-rank 방식으로 계산:
 
-```java
-int idx = (int) Math.ceil(p * n) - 1;
-return sortedAsc.get(idx);
+```kotlin
+val idx = ceil(p * n).toInt() - 1
+return sortedAsc[idx]
 ```
 
 표본 ~수만 까지는 메모리 정렬이 안전. 초당 수천 건 이상 트래픽이면 ClickHouse / BigQuery 등
