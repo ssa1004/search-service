@@ -374,7 +374,7 @@ commit 하지 않기 위해 `opensearch.auth.existingSecret` 와 `secret.name` (
 
 ## Portfolio Set 통합
 
-이 저장소는 8개 백엔드 저장소가 한 시스템처럼 동작하도록 묶인 포트폴리오 셋의 한
+이 저장소는 10개 백엔드 저장소가 한 시스템처럼 동작하도록 묶인 포트폴리오 셋의 한
 구성 요소입니다. profile 인덱스: <https://github.com/ssa1004/ssa1004>
 
 | 저장소 | 역할 | search-service 와의 관계 |
@@ -386,6 +386,8 @@ commit 하지 않기 위해 `opensearch.auth.existingSecret` 와 `secret.name` (
 | `notification-hub` | 다채널 알림 발송 hub (mail / push / slack) | SavedSearch 매치 시 본 service 가 발사하는 `search.alert.fired` 의 consumer |
 | `security-log-search` | SIEM (보안 로그 정규화 + 검색 + 알람) | 본 service 의 admin endpoint audit log 의 sink |
 | `commerce-ops` | 자체 Spring observability 모듈 + MSA 플레이그라운드 | tracing / metric 라이브러리 컨벤션 공유 |
+| `realtime-feed-service` | 실시간 호가 / 체결 feed 스트리밍 (WebFlux / SSE) | 인접 도메인 — 같은 commerce 운영 환경 공유, 당장 직접 통합점은 없음 |
+| `graphql-gateway` | 백엔드 통합 GraphQL gateway (BFF) | 본 service 의 검색 REST API 를 GraphQL 스키마로 stitching |
 | `search-service` | (본 저장소) commerce 상품 검색 백엔드 | 위 도메인 변경의 색인 + SavedSearch 매치 알림 |
 
 ### 통합 흐름
@@ -423,7 +425,7 @@ sequenceDiagram
 
 ### 시연 — `docker-compose.integration.yml`
 
-전 8 레포를 같이 띄우지 않고도, stub 으로 cross-repo 흐름만 닫아 한 호스트에서 시연
+전 10 레포를 같이 띄우지 않고도, stub 으로 cross-repo 흐름만 닫아 한 호스트에서 시연
 가능한 compose 파일을 제공합니다.
 
 - `infrastructure/docker-compose.integration.yml`
