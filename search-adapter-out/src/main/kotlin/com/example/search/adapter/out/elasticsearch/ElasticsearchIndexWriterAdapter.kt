@@ -26,7 +26,9 @@ import java.io.StringReader
  * - [createIndex] — bootstrap 의 mapping JSON 을 그대로 PUT.
  * - [swapAlias] — atomic alias actions (remove + add 한 번에).
  */
-class ElasticsearchIndexWriterAdapter(
+// open: CGLIB AOP proxy 대상 (@CircuitBreaker/@Retry) — @Bean 등록이라 클래스 레벨 스테레오타입이
+// 없어 plugin.spring allOpen 이 open 처리하지 않는다. Kotlin 클래스는 기본 final.
+open class ElasticsearchIndexWriterAdapter(
     private val client: ElasticsearchClient,
     private val properties: SearchIndexProperties,
     private val mappingResource: IndexMappingResource
