@@ -39,7 +39,9 @@ subprojects {
         "testRuntimeOnly"("org.junit.platform:junit-platform-launcher")
     }
 
-    tasks.withType<Test> {
+    // excludeTags 는 default `test` 태스크에만 — withType<Test> 로 걸면 integrationTest 까지
+    // 잡아 includeTags("integration") 를 덮어써 통합 테스트가 조용히 0건 실행된다.
+    tasks.named<Test>("test") {
         useJUnitPlatform {
             // ./gradlew test 는 단위만 실행. integration 태그는 별도 task 로 격리.
             excludeTags("integration")
