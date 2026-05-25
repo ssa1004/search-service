@@ -31,7 +31,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
 
     // ES Java Client 빈 등록 (ElasticsearchConfig 가 직접 RestClient/ElasticsearchClient 참조).
-    implementation("co.elastic.clients:elasticsearch-java:8.15.5")
+    implementation("co.elastic.clients:elasticsearch-java:9.4.1")
     implementation("com.fasterxml.jackson.core:jackson-databind")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
 

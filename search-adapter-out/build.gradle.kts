@@ -28,7 +28,7 @@ dependencies {
     // Elasticsearch — 공식 Java Client (8.x). Spring Data Elasticsearch 대신 low-level Java Client 직접
     // 사용 — function_score / aggregation 같은 복잡 query 의 DSL 표현력이 더 높고 mapping 도 그대로
     // JSON 으로 정의 가능. (ADR-0002 참고)
-    implementation("co.elastic.clients:elasticsearch-java:8.15.5")
+    implementation("co.elastic.clients:elasticsearch-java:9.4.1")
     implementation("com.fasterxml.jackson.core:jackson-databind")
     implementation("jakarta.json:jakarta.json-api:2.1.3")
     runtimeOnly("org.eclipse.parsson:parsson:1.1.6")
