@@ -47,11 +47,18 @@ services:
     environment:
       - KAFKA_CFG_NODE_ID=0
       - KAFKA_CFG_PROCESS_ROLES=controller,broker
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      # 두 listener 로 분리 — 호스트에서 ./gradlew bootRun 으로 띄운 앱(localhost:9092)과
+      # 컨테이너 내부 서비스(kafka:29092)가 둘 다 붙을 수 있게.
+      #   EXTERNAL  : 호스트 → localhost:9092  (앱 기본값 KAFKA_BOOTSTRAP=localhost:9092 와 일치)
+      #   INTERNAL  : 컨테이너 끼리 → kafka:29092 (broker 간 통신도 INTERNAL)
+      # 단일 listener(advertised: kafka:9092)면 호스트가 kafka 호스트명을 못 풀어
+      # CdcOutboxRelay producer 가 hang/실패한다 (CDC 색인이 멈추는 흔한 함정).
+      - KAFKA_CFG_LISTENERS=INTERNAL://:29092,EXTERNAL://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=INTERNAL://kafka:29092,EXTERNAL://localhost:9092
       - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
       - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
-      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=INTERNAL
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
       - ALLOW_PLAINTEXT_LISTENER=yes
     ports:
       - "9092:9092"
@@ -60,7 +67,7 @@ services:
     image: provectuslabs/kafka-ui:latest
     environment:
       - KAFKA_CLUSTERS_0_NAME=local
-      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:29092
     ports:
       - "8081:8080"
     depends_on:
