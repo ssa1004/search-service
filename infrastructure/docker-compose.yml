@@ -43,7 +43,7 @@ services:
         condition: service_healthy
 
   kafka:
-    image: bitnami/kafka:3.8
+    image: bitnamilegacy/kafka:3.8
     environment:
       - KAFKA_CFG_NODE_ID=0
       - KAFKA_CFG_PROCESS_ROLES=controller,broker
