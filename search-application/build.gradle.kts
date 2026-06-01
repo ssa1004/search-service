@@ -6,7 +6,7 @@
 plugins {
     `java-library`
     kotlin("jvm")
-    kotlin("plugin.spring") version "2.1.0"
+    kotlin("plugin.spring") version "2.3.21"
 }
 
 dependencies {
