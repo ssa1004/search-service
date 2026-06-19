@@ -18,13 +18,16 @@
 `generateOpenApiDocs` 태스크가 앱을 부팅한 뒤 `/v3/api-docs.yaml` 을 받아
 `docs/openapi/search-service.yaml` 로 저장한다.
 
+bootRun 을 **메모리 모드**(`SEARCH_ENGINE=memory`)로 띄우도록 설정되어 있어
+Docker / Postgres / Kafka / Elasticsearch 없이도 spec 을 생성할 수 있다 — datasource 는
+H2(in-memory), Kafka 비활성, 검색은 `InMemorySearchEngineAdapter`. REST 컨트롤러 매핑은
+검색 엔진과 무관하게 동일하게 노출되므로 생성된 spec 은 운영 모드와 동일하다.
+
 ```bash
-./gradlew :search-bootstrap:generateOpenApiDocs
+SEARCH_ENGINE=memory ./gradlew :search-bootstrap:generateOpenApiDocs
 ```
 
-앱 부팅에 Postgres / Kafka / Elasticsearch 가 필요하므로, 의존 인프라를 먼저 띄워야 한다.
-CI 에서는 service container 를 띄운 잡에서 위 태스크를 실행해 산출된 yaml 을
-commit 하거나 아티팩트로 업로드한다.
+CI 에서도 위 태스크를 실행해 산출된 yaml 을 commit 하거나 아티팩트로 업로드한다.
 
 ## 보는 법
 

@@ -87,11 +87,31 @@ tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
 
 // OpenAPI spec export 설정 — ./gradlew :search-bootstrap:generateOpenApiDocs.
 // 플러그인이 bootRun 으로 앱을 띄우고 apiDocsUrl 을 fetch 해 outputFileName 으로 저장한다.
-// 앱 부팅에 Postgres / Kafka / Elasticsearch 가 필요하므로 로컬 단독 실행보다는 CI 에서
-// docker compose 와 함께 돌리는 것을 권장 (docs/openapi/README.md 참고).
+//
+// 메모리 모드(SEARCH_ENGINE=memory)로 띄우므로 Docker / Postgres / Kafka / ES 없이도
+// spec 을 생성할 수 있다 — datasource 는 H2(in-memory), Kafka 는 비활성, 검색은
+// InMemorySearchEngineAdapter. REST 컨트롤러 매핑은 엔진과 무관하게 동일하게 노출된다.
 openApi {
     apiDocsUrl.set("http://localhost:8080/v3/api-docs.yaml")
     outputDir.set(layout.projectDirectory.dir("../docs/openapi"))
     outputFileName.set("search-service.yaml")
     waitTimeInSeconds.set(120)
+}
+
+// generateOpenApiDocs 가 forking 하는 bootRun 을 메모리 모드로 강제 — 외부 인프라 불필요.
+tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
+    environment("SEARCH_ENGINE", System.getenv("SEARCH_ENGINE") ?: "memory")
+    environment("SEARCH_KAFKA_ENABLED", System.getenv("SEARCH_KAFKA_ENABLED") ?: "false")
+}
+
+// openapi-gradle-plugin 1.9.0 + Gradle 8.x 호환 — forkedSpringBootRun 이 의존 모듈 jar 를
+// 입력으로 쓰면서 task 의존을 선언하지 않아 strict validation 으로 BUILD FAILED 가 난다.
+// 명시적 dependsOn 으로 jar 산출 순서를 보장.
+tasks.matching { it.name == "forkedSpringBootRun" }.configureEach {
+    dependsOn(
+        ":search-domain:jar",
+        ":search-application:jar",
+        ":search-adapter-in:jar",
+        ":search-adapter-out:jar",
+    )
 }
