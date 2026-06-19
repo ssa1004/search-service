@@ -36,6 +36,46 @@ jobs:
         # docker / Testcontainers 가 GitHub runner 에 기본 설치되어 있음.
         # 무거우면 별도 job 으로 분리 가능.
 
+  # Helm chart + raw k8s manifest 정적 검증 — gradle/docker 없이 빠르게 도는 독립 job.
+  # helm lint (dev + prod) 로 차트 문법을, helm template | kubeconform 으로 렌더된
+  # manifest 가 실제 k8s 스키마에 맞는지 schema-validate 한다.
+  infra-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.16.2
+
+      - name: Install kubeconform
+        run: |
+          curl -sSLf https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz \
+            | tar -xz -C /usr/local/bin kubeconform
+          kubeconform -v
+
+      - name: helm lint (dev + prod values)
+        run: |
+          helm lint helm/search-service
+          helm lint helm/search-service -f helm/search-service/values-prod.yaml
+
+      - name: helm template | kubeconform (dev + prod)
+        run: |
+          helm template search helm/search-service \
+            | kubeconform -strict -summary -kubernetes-version 1.30.0 \
+                -schema-location default -ignore-missing-schemas
+          helm template search helm/search-service -f helm/search-service/values-prod.yaml \
+            | kubeconform -strict -summary -kubernetes-version 1.30.0 \
+                -schema-location default -ignore-missing-schemas
+
+      - name: kubeconform — raw k8s manifests (infrastructure/k8s)
+        run: |
+          kubeconform -strict -summary -kubernetes-version 1.30.0 \
+            -schema-location default -ignore-missing-schemas \
+            infrastructure/k8s/
+
   build-image:
     runs-on: ubuntu-latest
     needs: test
