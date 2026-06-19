@@ -1,0 +1,33 @@
+%% search-service 관측성(observability) 토폴로지
+%% 렌더: npx @mermaid-js/mermaid-cli -i observability.mmd -o observability.svg
+flowchart LR
+    subgraph App["search-service (Spring Boot 3.4 · JVM 21)"]
+        direction TB
+        Web["REST controllers<br/>search + admin"]
+        Cdc["CdcConsumer / CdcDltConsumer<br/>Micrometer Counter<br/>cdc.consume · cdc.dlt"]
+        Jobs["@Scheduled jobs<br/>Outbox relay · retention<br/>SavedSearch evaluator"]
+        Health["Health<br/>SearchEngineHealthIndicator<br/>ApplicationReadinessCoordinator"]
+        Actuator["Spring Boot Actuator<br/>/actuator/health · info<br/>prometheus · metrics"]
+        Micrometer["Micrometer<br/>registry + tracing"]
+
+        Web --> Micrometer
+        Cdc --> Micrometer
+        Jobs --> Micrometer
+        Micrometer --> Actuator
+        Health --> Actuator
+    end
+
+    Prom["Prometheus<br/>scrape /actuator/prometheus"]
+    Graf["Grafana<br/>대시보드 · 알람"]
+    K8s["Kubernetes kubelet<br/>liveness · readiness · startup probe"]
+    Trace["분산 트레이싱 백엔드<br/>(Tempo / Zipkin / OTLP)"]
+
+    Actuator -- "GET /actuator/prometheus" --> Prom
+    Prom --> Graf
+    Actuator -- "GET /actuator/health/{liveness,readiness}" --> K8s
+    Micrometer -- "trace/span export" --> Trace
+
+    classDef app fill:#e8f0ff,stroke:#3b6ea5,color:#1b2a41;
+    classDef ext fill:#f3f4f6,stroke:#888,color:#222;
+    class Web,Cdc,Jobs,Health,Actuator,Micrometer app;
+    class Prom,Graf,K8s,Trace ext;
