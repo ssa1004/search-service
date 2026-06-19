@@ -1,6 +1,7 @@
 # Search Service
 
 [![CI](https://github.com/ssa1004/search-service/actions/workflows/ci.yml/badge.svg)](https://github.com/ssa1004/search-service/actions/workflows/ci.yml)
+[![Coverage: Kover](https://img.shields.io/badge/coverage-Kover-7F52FF.svg)](https://github.com/ssa1004/search-service/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.1-7F52FF.svg)](https://kotlinlang.org)
 [![JDK 21](https://img.shields.io/badge/JDK-21-orange.svg)](https://openjdk.org/projects/jdk/21/)
@@ -287,6 +288,22 @@ curl -X POST http://localhost:8080/api/v1/admin/index/reindex \
 ./gradlew :search-domain:test         # 도메인 단위
 ./gradlew :search-bootstrap:bootJar   # 배포용 jar 생성
 ```
+
+### 커버리지 (Kover)
+
+Kotlin 코드베이스라 JaCoCo 대신 [Kover](https://github.com/Kotlin/kotlinx-kover)
+로 커버리지를 집계합니다. 루트가 production 모듈 (`domain` / `application` /
+`adapter-in` / `adapter-out` / `bootstrap`) 의 단위 테스트 결과를 모아 단일 리포트로
+만듭니다 (`e2e-tests` 는 production source 가 없어 제외).
+
+```bash
+./gradlew koverHtmlReport   # build/reports/kover/html/index.html
+./gradlew koverXmlReport    # build/reports/kover/report.xml (CI 파싱용)
+./gradlew koverLog          # 콘솔에 커버리지 % 출력
+```
+
+CI (`ci.yml`) 가 매 빌드마다 위 리포트를 생성해 `kover-coverage` 아티팩트로
+업로드합니다.
 
 | 모듈 | 단위 테스트 | 검증 |
 |---|---|---|

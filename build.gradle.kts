@@ -7,6 +7,8 @@ plugins {
     kotlin("jvm") version "2.1.0" apply false
     // OpenAPI spec build-time export — 실제 적용은 bootstrap 모듈.
     id("org.springdoc.openapi-gradle-plugin") version "1.9.0" apply false
+    // 코드 커버리지 — Kotlin 코드베이스라 JaCoCo 대신 Kover. 루트에서 aggregate.
+    id("org.jetbrains.kotlinx.kover") version "0.9.1"
 }
 
 allprojects {
@@ -21,6 +23,8 @@ allprojects {
 subprojects {
     apply(plugin = "java")
     apply(plugin = "io.spring.dependency-management")
+    // 각 모듈의 test 실행을 계측 — 루트가 이 결과를 모아 aggregate report 를 만든다.
+    apply(plugin = "org.jetbrains.kotlinx.kover")
 
     java {
         toolchain {
@@ -63,5 +67,30 @@ subprojects {
     tasks.withType<JavaCompile> {
         options.compilerArgs.addAll(listOf("-parameters", "-Xlint:all", "-Xlint:-processing"))
         options.encoding = "UTF-8"
+    }
+}
+
+// 커버리지 aggregate — 루트가 production 모듈들의 계측 결과를 모은다.
+// e2e-tests 는 production source 가 없고 Testcontainers 를 끌어오므로 집계 대상에서 제외.
+// 리포트 생성: ./gradlew koverXmlReport koverHtmlReport
+//   - XML  → build/reports/kover/report.xml (배지 / CI 파싱용)
+//   - HTML → build/reports/kover/html/index.html
+dependencies {
+    kover(project(":search-domain"))
+    kover(project(":search-application"))
+    kover(project(":search-adapter-in"))
+    kover(project(":search-adapter-out"))
+    kover(project(":search-bootstrap"))
+}
+
+kover {
+    reports {
+        filters {
+            excludes {
+                // Spring Boot 진입점 / 생성 코드 — 단위 테스트 대상이 아니라 집계 노이즈.
+                classes("com.example.search.SearchApplication*")
+                annotatedBy("org.springframework.context.annotation.Configuration")
+            }
+        }
     }
 }

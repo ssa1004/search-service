@@ -31,6 +31,21 @@ jobs:
       - name: Unit tests (default — integration 제외)
         run: ./gradlew check --no-daemon
 
+      - name: Coverage — Kover aggregate report
+        # 단위 테스트 기준 production 모듈 커버리지 집계. 로그로 % 를 남기고
+        # XML/HTML 리포트를 아티팩트로 올린다 (배지는 README 의 Kover 라벨 참고).
+        run: ./gradlew koverXmlReport koverHtmlReport koverLog --no-daemon
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kover-coverage
+          path: |
+            build/reports/kover/report.xml
+            build/reports/kover/html
+          if-no-files-found: warn
+
       - name: Integration tests (Testcontainers ES + Postgres + Kafka)
         run: ./gradlew integrationTest --no-daemon
         # docker / Testcontainers 가 GitHub runner 에 기본 설치되어 있음.
