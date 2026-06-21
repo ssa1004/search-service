@@ -18,6 +18,7 @@ updates:
           - patch
 
   # GitHub Actions — workflow 에서 쓰는 action 버전 (checkout, setup-java 등).
+  # SHA 핀이라도 dependabot 이 트레일링 주석의 버전을 보고 갱신 PR 을 올린다.
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
@@ -27,3 +28,15 @@ updates:
     labels:
       - dependencies
       - github-actions
+
+  # Docker — runtime/build base image (eclipse-temurin) 갱신.
+  # Dockerfile 이 infrastructure/ 아래에 있어 directory 를 명시한다.
+  - package-ecosystem: docker
+    directory: "/infrastructure"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - docker
