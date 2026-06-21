@@ -145,7 +145,7 @@ jobs:
       - name: Upload Trivy SARIF to Security tab
         # 업로드 실패(권한/포크 PR 등) 가 빌드 전체를 깨지 않게 — 게이팅은 위 scan 의 exit-code 가 한다.
         # 스캔이 게이팅으로 실패해도 SARIF 는 올려 추적이 끊기지 않게 if: always().
-        uses: github/codeql-action/upload-sarif@dd903d2e4f5405488e5ef1422510ee31c8b32357 # v3
+        uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
         if: always()
         continue-on-error: true
         with:
