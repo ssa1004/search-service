@@ -36,6 +36,25 @@ subprojects {
         imports {
             mavenBom("org.springframework.boot:spring-boot-dependencies:3.5.15")
         }
+
+        // 보안 게이트(Trivy image scan, HIGH/CRITICAL, ignore-unfixed) 통과용 transitive 버전 상향.
+        // Spring Boot 3.5.15 BOM 이 fix 버전까지 올려주지 않는 CVE 들 — 각 항목을 fix 되는 최소
+        // 버전으로 명시한다.
+        //
+        // 주의: BOM 의 managed version 은 Gradle 의 constraints / resolutionStrategy.force 를
+        // 덮어쓴다. dependency-management 안에서 dependency() 로 직접 선언해야 BOM(서브-BOM 포함)을
+        // 이긴다. 직접 의존이 없는 모듈에서는 no-op.
+        dependencies {
+            // CVE-2025-48924 — commons-lang3 ClassUtils.getClass 무한 재귀(StackOverflow) DoS.
+            //   경로: springdoc → swagger-core-jakarta:2.2.22 → commons-lang3 (BOM 이 3.17.0 고정).
+            dependency("org.apache.commons:commons-lang3:3.18.0")
+            // CVE-2026-45292 — opentelemetry baggage 파싱 unbounded memory/CPU DoS.
+            //   경로: elasticsearch-java → elasticsearch-rest-client → opentelemetry-api
+            //   (BOM 이 opentelemetry-bom 1.49.0 import). api/context 는 동일 릴리스 라인이라
+            //   짝을 맞춰 1.62.0 으로 올린다.
+            dependency("io.opentelemetry:opentelemetry-api:1.62.0")
+            dependency("io.opentelemetry:opentelemetry-context:1.62.0")
+        }
     }
 
     dependencies {
