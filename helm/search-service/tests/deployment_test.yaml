@@ -1,0 +1,114 @@
+suite: deployment — security / probes / resources
+templates:
+  - templates/deployment.yaml
+  # deployment 의 checksum/config 어노테이션이 configmap.yaml 을 include 하므로
+  # 해당 named template 이 scope 에 있어야 렌더된다. 각 test 는 test-level
+  # `template:` 로 deployment.yaml 문서에 고정한다.
+  - templates/configmap.yaml
+tests:
+  - it: renders the app container in the Deployment
+    template: templates/deployment.yaml
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: app
+
+  # ── Pod securityContext (PSS restricted) ──
+  - it: sets a hardened pod securityContext (non-root, seccomp RuntimeDefault)
+    template: templates/deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.runAsNonRoot
+          value: true
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 1000
+      - equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 1000
+      - equal:
+          path: spec.template.spec.securityContext.seccompProfile.type
+          value: RuntimeDefault
+
+  # ── Container securityContext ──
+  - it: sets a hardened container securityContext (drop ALL, read-only root, no privesc)
+    template: templates/deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation
+          value: false
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+      - contains:
+          path: spec.template.spec.containers[0].securityContext.capabilities.drop
+          content: ALL
+      # readOnlyRootFilesystem=true 이므로 /tmp tmpfs 가 반드시 mount 돼야 한다.
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: tmp
+            mountPath: /tmp
+
+  # ── 3종 probe (ADR-0010) ──
+  - it: wires all three probes against the http port
+    template: templates/deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.httpGet.path
+          value: /actuator/health/liveness
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.httpGet.port
+          value: http
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.path
+          value: /actuator/health/readiness
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.path
+          value: /actuator/health/liveness
+
+  # ── resources ──
+  - it: applies resource requests and limits from values
+    template: templates/deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: 300m
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: 768Mi
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: 1500m
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: 1536Mi
+
+  # ── replicas vs HPA toggle ──
+  - it: sets replicas when HPA is disabled (default)
+    template: templates/deployment.yaml
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 1
+
+  - it: omits replicas when HPA is enabled to avoid controller race
+    template: templates/deployment.yaml
+    set:
+      hpa.enabled: true
+    asserts:
+      - notExists:
+          path: spec.replicas
+
+  # ── graceful shutdown ──
+  - it: sets terminationGracePeriodSeconds and a preStop sleep hook
+    template: templates/deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.terminationGracePeriodSeconds
+          value: 30
+      - equal:
+          path: spec.template.spec.containers[0].lifecycle.preStop.exec.command
+          value: ["/bin/sh", "-c", "sleep 5"]

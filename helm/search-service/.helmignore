@@ -14,3 +14,5 @@
 .vscode/
 .project
 .idea/
+# helm-unittest 스위트 — chart 아티팩트에 포함 불필요.
+tests/
