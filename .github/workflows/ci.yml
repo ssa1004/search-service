@@ -76,11 +76,15 @@ jobs:
 
       # helm-unittest — 렌더된 manifest 의 securityContext / probe / resource / HPA toggle 를
       # 단언으로 고정. helm template 만으로는 잡지 못하는 회귀를 막는다.
-      - name: Install helm-unittest plugin
-        run: helm plugin install https://github.com/helm-unittest/helm-unittest --version 1.1.1
-
+      # 공식 helm-unittest 이미지로 실행 — helm 과 plugin 버전을 한 쌍으로 고정한다.
+      # CI 의 helm 으로는 `helm plugin install` 시 1.1.x 가 unusable
+      # ("unknown field platformHooks") 였다. 이 이미지는 helm 3.20.2 + plugin 1.1.0
+      # 을 핀하며, /apps 가 작업 디렉터리이므로 차트 경로는 repo 기준 상대경로다.
       - name: helm unittest
-        run: helm unittest helm/search-service
+        run: |
+          docker run --rm -v "${{ github.workspace }}:/apps" \
+            helmunittest/helm-unittest:3.20.2-1.1.0 \
+            helm/search-service
 
       - name: Install kubeconform
         run: |
