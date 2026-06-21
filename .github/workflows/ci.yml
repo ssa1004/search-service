@@ -118,8 +118,36 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     timeout-minutes: 15
+    permissions:
+      contents: read
+      # Trivy SARIF 결과를 Security 탭(code scanning) 에 업로드하기 위한 권한.
+      security-events: write
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
       - name: Build image (no push — 빌드 검증만)
         run: docker build -f infrastructure/Dockerfile -t search-service:${{ github.sha }} .
+
+      # 빌드된 이미지의 OS/라이브러리 취약점을 게이팅 — fixable HIGH/CRITICAL 발견 시 빌드 실패.
+      # 결과는 SARIF 로도 떨궈 Security 탭(code scanning) 에 누적, 시간순 추적이 가능하게 한다.
+      # @master 같은 mutable ref 는 공급망 취약점 — SHA 로 고정.
+      - name: Trivy image scan (게이팅 + SARIF)
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          scan-type: image
+          image-ref: search-service:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          format: sarif
+          output: trivy.sarif
+
+      - name: Upload Trivy SARIF to Security tab
+        # 업로드 실패(권한/포크 PR 등) 가 빌드 전체를 깨지 않게 — 게이팅은 위 scan 의 exit-code 가 한다.
+        # 스캔이 게이팅으로 실패해도 SARIF 는 올려 추적이 끊기지 않게 if: always().
+        uses: github/codeql-action/upload-sarif@dd903d2e4f5405488e5ef1422510ee31c8b32357 # v3
+        if: always()
+        continue-on-error: true
+        with:
+          sarif_file: trivy.sarif
+          category: trivy-container
