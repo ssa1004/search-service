@@ -4,11 +4,11 @@ plugins {
     id("org.springframework.boot") version "3.5.15" apply false
     id("io.spring.dependency-management") version "1.1.7" apply false
     // Kotlin 은 도메인 모듈만 사용 — 루트에서는 버전만 고정하고 apply 는 모듈이 직접.
-    kotlin("jvm") version "2.1.0" apply false
+    kotlin("jvm") version "2.4.0" apply false
     // OpenAPI spec build-time export — 실제 적용은 bootstrap 모듈.
     id("org.springdoc.openapi-gradle-plugin") version "1.9.0" apply false
     // 코드 커버리지 — Kotlin 코드베이스라 JaCoCo 대신 Kover. 루트에서 aggregate.
-    id("org.jetbrains.kotlinx.kover") version "0.9.1"
+    id("org.jetbrains.kotlinx.kover") version "0.9.8"
 }
 
 allprojects {

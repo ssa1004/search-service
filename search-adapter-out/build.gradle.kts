@@ -6,8 +6,8 @@
 plugins {
     `java-library`
     kotlin("jvm")
-    kotlin("plugin.spring") version "2.1.0"
-    kotlin("plugin.jpa") version "2.1.0"
+    kotlin("plugin.spring") version "2.4.0"
+    kotlin("plugin.jpa") version "2.4.0"
 }
 
 dependencies {
@@ -31,10 +31,10 @@ dependencies {
     implementation("co.elastic.clients:elasticsearch-java:8.15.5")
     implementation("com.fasterxml.jackson.core:jackson-databind")
     implementation("jakarta.json:jakarta.json-api:2.1.3")
-    runtimeOnly("org.eclipse.parsson:parsson:1.1.6")
+    runtimeOnly("org.eclipse.parsson:parsson:1.1.9")
 
     // Resilience4j — ES 호출 보호 (CB + Retry + Bulkhead).
-    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.2.0")
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.4.0")
 
     // ShedLock — 멀티 인스턴스에서 @Scheduled 중복 실행 방지 (outbox retention 등).
     // OutboxRetentionJob 이 @SchedulerLock 어노테이션을 사용하므로 api 로 노출.
