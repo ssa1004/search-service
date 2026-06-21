@@ -81,8 +81,10 @@ jobs:
       # ("unknown field platformHooks") 였다. 이 이미지는 helm 3.20.2 + plugin 1.1.0
       # 을 핀하며, /apps 가 작업 디렉터리이므로 차트 경로는 repo 기준 상대경로다.
       - name: helm unittest
+        # --user 0: run as root so helm-unittest can write tests/__snapshot__ into
+        # the bind-mounted (runner-owned) workspace.
         run: |
-          docker run --rm -v "${{ github.workspace }}:/apps" \
+          docker run --rm --user 0 -v "${{ github.workspace }}:/apps" \
             helmunittest/helm-unittest:3.20.2-1.1.0 \
             helm/search-service
 
