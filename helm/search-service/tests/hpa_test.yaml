@@ -1,0 +1,67 @@
+suite: hpa — toggle and metric wiring
+templates:
+  - templates/hpa.yaml
+tests:
+  - it: renders nothing when HPA is disabled (default)
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders a HorizontalPodAutoscaler when enabled
+    set:
+      hpa.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: HorizontalPodAutoscaler
+      - equal:
+          path: apiVersion
+          value: autoscaling/v2
+
+  - it: targets the Deployment with min/max replicas from values
+    set:
+      hpa.enabled: true
+      hpa.minReplicas: 3
+      hpa.maxReplicas: 12
+    asserts:
+      - equal:
+          path: spec.scaleTargetRef.kind
+          value: Deployment
+      - equal:
+          path: spec.minReplicas
+          value: 3
+      - equal:
+          path: spec.maxReplicas
+          value: 12
+
+  - it: emits a CPU metric when targetCPUUtilizationPercentage > 0
+    set:
+      hpa.enabled: true
+      hpa.targetCPUUtilizationPercentage: 60
+    asserts:
+      - contains:
+          path: spec.metrics
+          content:
+            type: Resource
+            resource:
+              name: cpu
+              target:
+                type: Utilization
+                averageUtilization: 60
+
+  - it: omits the memory metric when targetMemoryUtilizationPercentage is 0
+    set:
+      hpa.enabled: true
+      hpa.targetCPUUtilizationPercentage: 60
+      hpa.targetMemoryUtilizationPercentage: 0
+    asserts:
+      - notContains:
+          path: spec.metrics
+          content:
+            type: Resource
+            resource:
+              name: memory
+              target:
+                type: Utilization
+                averageUtilization: 0

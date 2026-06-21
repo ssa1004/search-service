@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "search-service helm values",
+  "description": "Schema for search-service chart values. helm lint/install validate values.yaml and any -f override against this before rendering.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["image", "resources", "service", "probes", "hpa"],
+  "properties": {
+    "replicaCount": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "nameOverride": { "type": "string" },
+    "fullnameOverride": { "type": "string" },
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "pullPolicy"],
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "tag": { "type": "string" },
+        "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] },
+        "pullSecrets": { "type": "array", "items": { "type": "object" } }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requests", "limits"],
+      "properties": {
+        "requests": { "$ref": "#/$defs/resourceQuantities" },
+        "limits": { "$ref": "#/$defs/resourceQuantities" }
+      }
+    },
+    "service": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "port", "targetPort"],
+      "properties": {
+        "type": { "type": "string", "enum": ["ClusterIP", "NodePort", "LoadBalancer"] },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "targetPort": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "annotations": { "type": "object" }
+      }
+    },
+    "serviceAccount": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "create": { "type": "boolean" },
+        "name": { "type": "string" },
+        "annotations": { "type": "object" },
+        "automountServiceAccountToken": { "type": "boolean" }
+      }
+    },
+    "podSecurityContext": { "type": "object" },
+    "containerSecurityContext": { "type": "object" },
+    "probes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["startup", "readiness", "liveness"],
+      "properties": {
+        "startup": { "$ref": "#/$defs/probe" },
+        "readiness": { "$ref": "#/$defs/probe" },
+        "liveness": { "$ref": "#/$defs/probe" }
+      }
+    },
+    "gracefulShutdown": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "terminationGracePeriodSeconds": { "type": "integer", "minimum": 0 },
+        "preStopSleepSeconds": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "config": { "type": "object" },
+    "postgres": {
+      "type": "object",
+      "properties": {
+        "host": { "type": "string" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "database": { "type": "string" },
+        "user": { "type": "string" }
+      }
+    },
+    "opensearch": {
+      "type": "object",
+      "properties": {
+        "endpoint": { "type": "string" },
+        "auth": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "existingSecret": { "type": "string" },
+            "usernameKey": { "type": "string" },
+            "passwordKey": { "type": "string" }
+          }
+        }
+      }
+    },
+    "redis": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "host": { "type": "string" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+      }
+    },
+    "kafka": {
+      "type": "object",
+      "properties": {
+        "bootstrap": { "type": "string" }
+      }
+    },
+    "secret": {
+      "type": "object",
+      "properties": {
+        "create": { "type": "boolean" },
+        "name": { "type": "string" },
+        "postgres": { "type": "object" }
+      }
+    },
+    "ingress": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "className": { "type": "string" },
+        "annotations": { "type": "object" },
+        "hosts": { "type": "array" },
+        "tls": { "type": "array" }
+      }
+    },
+    "hpa": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "minReplicas", "maxReplicas"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "minReplicas": { "type": "integer", "minimum": 1 },
+        "maxReplicas": { "type": "integer", "minimum": 1 },
+        "targetCPUUtilizationPercentage": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "targetMemoryUtilizationPercentage": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "behavior": { "type": "object" }
+      }
+    },
+    "pdb": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "minAvailable": { "type": ["integer", "string"] },
+        "maxUnavailable": { "type": ["integer", "string"] }
+      }
+    },
+    "networkPolicy": { "type": "object" },
+    "podAnnotations": { "type": "object" },
+    "podLabels": { "type": "object" },
+    "nodeSelector": { "type": "object" },
+    "tolerations": { "type": "array" },
+    "affinity": { "type": "object" }
+  },
+  "$defs": {
+    "resourceQuantities": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cpu": { "type": ["string", "integer"] },
+        "memory": { "type": ["string", "integer"] }
+      }
+    },
+    "probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "periodSeconds", "failureThreshold"],
+      "properties": {
+        "path": { "type": "string", "pattern": "^/" },
+        "periodSeconds": { "type": "integer", "minimum": 1 },
+        "failureThreshold": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}
