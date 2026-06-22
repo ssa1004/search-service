@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.1-7F52FF.svg)](https://kotlinlang.org)
 [![JDK 21](https://img.shields.io/badge/JDK-21-orange.svg)](https://openjdk.org/projects/jdk/21/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4-6DB33F.svg)](https://spring.io/projects/spring-boot)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5-6DB33F.svg)](https://spring.io/projects/spring-boot)
 [![Elasticsearch](https://img.shields.io/badge/Elasticsearch-8.15-005571.svg)](https://www.elastic.co/elasticsearch)
 
 commerce 상품 검색 서비스의 백엔드입니다. 키워드 검색, 자동완성, faceted filter, 사용자
@@ -16,7 +16,7 @@ commerce 상품 검색 서비스의 백엔드입니다. 키워드 검색, 자동
 
 - **Language**: 운영(production) 코드 100% Kotlin 2.1 (JVM 21 — virtual threads).
   단위 테스트 스위트는 아직 JUnit 5 + Java (36개), e2e 테스트만 Kotlin (3개) — 마이그레이션 진행 중.
-- **Framework**: Spring Boot 3.4.13
+- **Framework**: Spring Boot 3.5.15
 - **Source DB**: PostgreSQL 16, Flyway
 - **Search Engine**: Elasticsearch 8.15 (공식 Java Client)
 - **Messaging**: Apache Kafka (CDC topic — `product.changes`)
