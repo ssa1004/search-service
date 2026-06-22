@@ -2,41 +2,44 @@ version: 2
 updates:
   # Gradle 의존성 — 멀티 모듈이라 build.gradle.kts 가 여러 개지만 dependabot 이
   # 디렉토리 트리를 재귀로 스캔한다.
+  # monthly + groups: 모든 gradle 갱신을 한 달에 PR 하나로 묶어 알림 노이즈를 줄인다.
   - package-ecosystem: gradle
     directory: "/"
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
     open-pull-requests-limit: 5
     labels:
       - dependencies
     groups:
-      # patch / minor 는 한 PR 로 묶어 노이즈를 줄인다. major 는 개별 PR.
-      minor-and-patch:
-        update-types:
-          - minor
-          - patch
+      gradle-all:
+        patterns: ["*"]
 
   # GitHub Actions — workflow 에서 쓰는 action 버전 (checkout, setup-java 등).
   # SHA 핀이라도 dependabot 이 트레일링 주석의 버전을 보고 갱신 PR 을 올린다.
+  # monthly + groups: 모든 action 갱신을 월 1회 단일 PR 로 묶는다.
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
     open-pull-requests-limit: 5
     labels:
       - dependencies
       - github-actions
+    groups:
+      github-actions-all:
+        patterns: ["*"]
 
   # Docker — runtime/build base image (eclipse-temurin) 갱신.
   # Dockerfile 이 infrastructure/ 아래에 있어 directory 를 명시한다.
+  # monthly + groups: 모든 base image 갱신을 월 1회 단일 PR 로 묶는다.
   - package-ecosystem: docker
     directory: "/infrastructure"
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
     open-pull-requests-limit: 5
     labels:
       - dependencies
       - docker
+    groups:
+      docker-infrastructure-all:
+        patterns: ["*"]
