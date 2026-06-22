@@ -22,8 +22,10 @@ dependencies {
     // Kafka consumer — CDC 메시지 수신.
     implementation("org.springframework.kafka:spring-kafka")
 
-    // OpenAPI.
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
+    // OpenAPI. 2.8.x 가 Spring Framework 6.2 (Spring Boot 3.5) 호환선 — 2.6.0 은 Spring 6.1
+    // (Boot 3.3) 대상이라 /v3/api-docs 호출 시 ControllerAdviceBean(Object) NoSuchMethodError
+    // 로 spec 생성이 깨진다 (6.2 에서 해당 생성자 제거됨).
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6")
 
     // Tracing + metrics — CdcConsumer / CdcDltConsumer 가 cdc.consume / cdc.dlt 카운터 발행.
     implementation("io.micrometer:micrometer-tracing")

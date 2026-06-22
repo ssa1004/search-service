@@ -45,6 +45,11 @@ dependencies {
     // Kafka — KafkaConfig 가 ConsumerFactory / ContainerFactory 빈을 직접 정의.
     implementation("org.springframework.kafka:spring-kafka")
 
+    // OpenAPI models — OpenApiConfig 가 io.swagger.v3.oas.models 로 spec metadata(info/server)
+    // 를 결정적으로 고정한다. adapter-in 의 springdoc 의존은 implementation 이라 여기까지
+    // 전이되지 않으므로 명시.
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6")
+
     // Actuator + Prometheus.
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("io.micrometer:micrometer-registry-prometheus")
