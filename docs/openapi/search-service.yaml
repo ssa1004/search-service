@@ -1,0 +1,686 @@
+openapi: 3.1.0
+info:
+  title: Search Service API
+  description: "commerce 상품 검색 서비스 REST API — 키워드 검색, 자동완성, faceted filter, 무중단 reindex,\
+    \ synonym/analytics/CDC DLT 운영."
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  version: v1
+servers:
+- url: /
+  description: relative to deployment host
+paths:
+  /api/v1/search/searches/{searchId}/clicks:
+    post:
+      tags:
+      - search-controller
+      operationId: recordClick
+      parameters:
+      - name: searchId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordClickRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+  /api/v1/search/products:
+    post:
+      tags:
+      - search-controller
+      operationId: search
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SearchResponse"
+  /api/v1/admin/synonyms:
+    get:
+      tags:
+      - admin-synonym-controller
+      operationId: list
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ListResponse"
+    post:
+      tags:
+      - admin-synonym-controller
+      operationId: register
+      parameters:
+      - name: X-Operator-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SynonymGroupDto"
+  /api/v1/admin/synonyms/apply:
+    post:
+      tags:
+      - admin-synonym-controller
+      operationId: apply
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApplyResponse"
+  /api/v1/admin/index/reindex:
+    post:
+      tags:
+      - admin-index-controller
+      operationId: reindex
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReindexRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ReindexResponse"
+  /api/v1/search/related:
+    get:
+      tags:
+      - search-controller
+      operationId: related
+      parameters:
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 5
+      - name: maxDistance
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 2
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RelatedResponse"
+  /api/v1/search/autocomplete:
+    get:
+      tags:
+      - search-controller
+      operationId: autocomplete
+      parameters:
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AutocompleteResponse"
+  /api/v1/admin/analytics/queries/zero-result:
+    get:
+      tags:
+      - admin-analytics-controller
+      operationId: zeroResult
+      parameters:
+      - name: from
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date-time
+      - name: to
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date-time
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/TopQueriesResponse"
+  /api/v1/admin/analytics/queries/top:
+    get:
+      tags:
+      - admin-analytics-controller
+      operationId: top
+      parameters:
+      - name: from
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date-time
+      - name: to
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date-time
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/TopQueriesResponse"
+  /api/v1/admin/analytics/latency:
+    get:
+      tags:
+      - admin-analytics-controller
+      operationId: latency
+      parameters:
+      - name: from
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date-time
+      - name: to
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date-time
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/LatencyResponse"
+  /api/v1/admin/analytics/ctr:
+    get:
+      tags:
+      - admin-analytics-controller
+      operationId: ctr
+      parameters:
+      - name: from
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date-time
+      - name: to
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date-time
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CtrResponse"
+  /api/v1/admin/synonyms/{id}:
+    delete:
+      tags:
+      - admin-synonym-controller
+      operationId: delete
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+components:
+  schemas:
+    RecordClickRequest:
+      type: object
+      properties:
+        productId:
+          type: string
+          minLength: 1
+        userId:
+          type: string
+          minLength: 1
+        keyword:
+          type: string
+          maxLength: 200
+          minLength: 0
+        rank:
+          type: integer
+          format: int32
+          minimum: 1
+      required:
+      - keyword
+      - productId
+      - rank
+      - userId
+    FacetSpecDto:
+      type: object
+      properties:
+        name:
+          type: string
+        field:
+          type: string
+        type:
+          type: string
+        size:
+          type: integer
+          format: int32
+        buckets:
+          type: array
+          items:
+            $ref: "#/components/schemas/RangeBucketDto"
+      required:
+      - field
+      - name
+      - type
+    FilterDto:
+      type: object
+      properties:
+        field:
+          type: string
+        op:
+          type: string
+        value:
+          type: string
+        values:
+          type: array
+          items:
+            type: string
+          maxItems: 100
+          minItems: 0
+        from:
+          type: integer
+          format: int64
+        fromInclusive:
+          type: boolean
+        to:
+          type: integer
+          format: int64
+        toInclusive:
+          type: boolean
+      required:
+      - field
+      - op
+    RangeBucketDto:
+      type: object
+      properties:
+        key:
+          type: string
+        from:
+          type: integer
+          format: int64
+        to:
+          type: integer
+          format: int64
+      required:
+      - key
+    SearchRequest:
+      type: object
+      properties:
+        keyword:
+          type: string
+          maxLength: 200
+          minLength: 0
+        filters:
+          type: array
+          items:
+            $ref: "#/components/schemas/FilterDto"
+          maxItems: 20
+          minItems: 0
+        facets:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacetSpecDto"
+          maxItems: 10
+          minItems: 0
+        sort:
+          $ref: "#/components/schemas/SortDto"
+        page:
+          type: integer
+          format: int32
+          minimum: 0
+        size:
+          type: integer
+          format: int32
+          maximum: 100
+          minimum: 1
+      required:
+      - page
+      - size
+    SortDto:
+      type: object
+      properties:
+        field:
+          type: string
+        direction:
+          type: string
+      required:
+      - direction
+      - field
+    FacetBucketDto:
+      type: object
+      properties:
+        key:
+          type: string
+        count:
+          type: integer
+          format: int64
+      required:
+      - count
+      - key
+    HitDto:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        brand:
+          type: string
+        category:
+          type: string
+        priceWon:
+          type: integer
+          format: int64
+        stockQuantity:
+          type: integer
+          format: int32
+        status:
+          type: string
+        score:
+          type: number
+          format: double
+      required:
+      - id
+      - name
+      - priceWon
+      - score
+      - stockQuantity
+    SearchResponse:
+      type: object
+      properties:
+        totalHits:
+          type: integer
+          format: int64
+        took:
+          type: integer
+          format: int64
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        hits:
+          type: array
+          items:
+            $ref: "#/components/schemas/HitDto"
+        facets:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: "#/components/schemas/FacetBucketDto"
+      required:
+      - facets
+      - hits
+      - page
+      - size
+      - took
+      - totalHits
+    RegisterRequest:
+      type: object
+      properties:
+        terms:
+          type: array
+          items:
+            type: string
+          maxItems: 50
+          minItems: 2
+        direction:
+          type: string
+          minLength: 1
+      required:
+      - direction
+      - terms
+    SynonymGroupDto:
+      type: object
+      properties:
+        id:
+          type: string
+        terms:
+          type: array
+          items:
+            type: string
+        direction:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+        updatedBy:
+          type: string
+      required:
+      - direction
+      - id
+      - terms
+      - updatedAt
+      - updatedBy
+    ApplyResponse:
+      type: object
+      properties:
+        applied:
+          type: integer
+          format: int32
+      required:
+      - applied
+    ReindexRequest:
+      type: object
+      properties:
+        suffix:
+          type: string
+          minLength: 1
+        dropOld:
+          type: boolean
+      required:
+      - dropOld
+      - suffix
+    ReindexResponse:
+      type: object
+      properties:
+        newPhysicalName:
+          type: string
+        sourceDocCount:
+          type: integer
+          format: int64
+        targetDocCount:
+          type: integer
+          format: int64
+        swapped:
+          type: boolean
+      required:
+      - newPhysicalName
+      - sourceDocCount
+      - swapped
+      - targetDocCount
+    RelatedDto:
+      type: object
+      properties:
+        suggestedKeyword:
+          type: string
+        popularity:
+          type: integer
+          format: int64
+        distance:
+          type: integer
+          format: int32
+      required:
+      - distance
+      - popularity
+      - suggestedKeyword
+    RelatedResponse:
+      type: object
+      properties:
+        related:
+          type: array
+          items:
+            $ref: "#/components/schemas/RelatedDto"
+      required:
+      - related
+    AutocompleteResponse:
+      type: object
+      properties:
+        suggestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/SuggestionDto"
+      required:
+      - suggestions
+    SuggestionDto:
+      type: object
+      properties:
+        text:
+          type: string
+        productId:
+          type: string
+        score:
+          type: number
+          format: double
+      required:
+      - productId
+      - score
+      - text
+    ListResponse:
+      type: object
+      properties:
+        groups:
+          type: array
+          items:
+            $ref: "#/components/schemas/SynonymGroupDto"
+      required:
+      - groups
+    QueryStatDto:
+      type: object
+      properties:
+        keyword:
+          type: string
+        count:
+          type: integer
+          format: int64
+      required:
+      - count
+      - keyword
+    TopQueriesResponse:
+      type: object
+      properties:
+        queries:
+          type: array
+          items:
+            $ref: "#/components/schemas/QueryStatDto"
+      required:
+      - queries
+    LatencyResponse:
+      type: object
+      properties:
+        p50:
+          type: integer
+          format: int64
+        p95:
+          type: integer
+          format: int64
+        p99:
+          type: integer
+          format: int64
+        sampleSize:
+          type: integer
+          format: int64
+      required:
+      - p50
+      - p95
+      - p99
+      - sampleSize
+    CtrResponse:
+      type: object
+      properties:
+        searchesWithResults:
+          type: integer
+          format: int64
+        clicks:
+          type: integer
+          format: int64
+        rate:
+          type: number
+          format: double
+      required:
+      - clicks
+      - rate
+      - searchesWithResults
