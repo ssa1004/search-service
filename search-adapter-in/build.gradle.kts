@@ -6,7 +6,7 @@
 plugins {
     `java-library`
     kotlin("jvm")
-    kotlin("plugin.spring") version "2.1.0"
+    kotlin("plugin.spring") version "2.4.0"
 }
 
 dependencies {
@@ -23,7 +23,7 @@ dependencies {
     implementation("org.springframework.kafka:spring-kafka")
 
     // OpenAPI.
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
 
     // Tracing + metrics — CdcConsumer / CdcDltConsumer 가 cdc.consume / cdc.dlt 카운터 발행.
     implementation("io.micrometer:micrometer-tracing")

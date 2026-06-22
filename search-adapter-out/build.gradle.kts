@@ -6,8 +6,8 @@
 plugins {
     `java-library`
     kotlin("jvm")
-    kotlin("plugin.spring") version "2.1.0"
-    kotlin("plugin.jpa") version "2.1.0"
+    kotlin("plugin.spring") version "2.4.0"
+    kotlin("plugin.jpa") version "2.4.0"
 }
 
 dependencies {
@@ -28,17 +28,17 @@ dependencies {
     // Elasticsearch — 공식 Java Client (8.x). Spring Data Elasticsearch 대신 low-level Java Client 직접
     // 사용 — function_score / aggregation 같은 복잡 query 의 DSL 표현력이 더 높고 mapping 도 그대로
     // JSON 으로 정의 가능. (ADR-0002 참고)
-    implementation("co.elastic.clients:elasticsearch-java:8.15.5")
+    implementation("co.elastic.clients:elasticsearch-java:9.4.2")
     implementation("com.fasterxml.jackson.core:jackson-databind")
     implementation("jakarta.json:jakarta.json-api:2.1.3")
-    runtimeOnly("org.eclipse.parsson:parsson:1.1.6")
+    runtimeOnly("org.eclipse.parsson:parsson:1.1.9")
 
     // Resilience4j — ES 호출 보호 (CB + Retry + Bulkhead).
-    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.2.0")
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.4.0")
 
     // ShedLock — 멀티 인스턴스에서 @Scheduled 중복 실행 방지 (outbox retention 등).
     // OutboxRetentionJob 이 @SchedulerLock 어노테이션을 사용하므로 api 로 노출.
-    api("net.javacrumbs.shedlock:shedlock-spring:5.16.0")
+    api("net.javacrumbs.shedlock:shedlock-spring:7.7.0")
 
     // Messaging — Kafka producer / consumer.
     implementation("org.springframework.kafka:spring-kafka")
