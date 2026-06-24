@@ -43,6 +43,15 @@ shutdown 직전 trim 이나 SQL script 가 30s 넘기는 경우의 false positiv
 - 단점: leak-detection-threshold 가 30s 면 정상 long-running batch (예: reindex) 가 발생시킬
   수 있음 — batch 작업은 별도 datasource 분리 검토 가치.
 
+## 용어 풀이 (쉽게)
+
+- **HikariCP / 커넥션 풀** — DB 연결을 미리 여러 개 만들어 두고 빌려주는 대여소. 매번 새로 연결하면 느리니 미리 뚫어 둔 연결을 돌려 쓴다.
+- **풀 포화 / connection leak** — 포화는 빌려줄 연결이 동나 새 요청이 줄 서다 멈추는 것. leak은 빌린 연결을 안 돌려줘 조용히 사라지는 것(공유 우산을 안 반납해 다 떨어진 셈).
+- **leak detection** — 30초 넘게 안 돌려준 연결의 흔적(어디서 빌려갔는지)을 로그로 찍어 범인을 잡는 기능.
+- **가상 스레드(Virtual Thread)** — OS가 직접 관리하는 무거운 스레드 대신 JVM이 관리하는 아주 가벼운 스레드. 적은 자원으로 동시에 많은 일을 받는다.
+- **max-lifetime / idle timeout** — 연결을 너무 오래·놀린 채 두지 않게 일정 시간 지나면 끊는 설정. 서버가 몰래 끊은 연결을 모르고 쓰다 나는 오류를 피한다.
+- **pgbouncer** — DB 앞에 두는 연결 중개소. 수많은 앱 연결을 적은 실제 DB 연결로 묶어 DB 부담을 줄인다.
+
 ## 다시 검토할 시점
 - 실 운영에서 hikari `pending` 메트릭 (대기 thread 수) 이 0 보다 자주 튀면 pool 키운다.
 - Postgres `max_connections` 가 줄거나 pgbouncer transaction pooling 으로 이행 시 pool 재산정.

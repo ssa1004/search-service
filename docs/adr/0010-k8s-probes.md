@@ -45,6 +45,15 @@ K8s probe 를 readiness + liveness 두 개만 운영하면 두 가지 문제가 
 - 단점: ES 전체 fail 이 아니라 일부 shard 만 red 인 경우는 ping 으로 못 잡는다 — 별도 search
   성공률 메트릭 + alert 가 보완.
 
+## 용어 풀이 (쉽게)
+
+- **K8s 3종 probe** — 쿠버네티스가 컨테이너 상태를 보는 세 검사. startup(부팅 다 됐나?), readiness(손님 받아도 되나?), liveness(살아는 있나?).
+- **liveness에 외부 의존 제외** — '살아 있나' 검사에는 DB·ES를 넣지 않는다. ES가 잠깐 흔들렸다고 멀쩡한 pod까지 재시작되는 걸 막으려고.
+- **cascade fail(연쇄 장애)** — ES가 죽으면 그걸 부르는 검색이 줄줄이 5xx로 무너지고, 그 위로 도미노처럼 번지는 장애.
+- **retry storm(재시도 폭주)** — 실패한 호출을 모두가 동시에 다시 때려, 가뜩이나 힘든 서버를 더 죽이는 악순환.
+- **flap(플랩)** — 상태가 UP↔DOWN을 빠르게 깜빡이는 것. 그래서 '연속 3회 실패'처럼 여러 번 확인 후에만 차단한다.
+- **shard red(샤드 레드)** — ES 데이터를 쪼갠 조각(shard) 중 일부가 망가진 상태. 전체는 살아 있어 ping은 통과하지만 일부 검색이 빠진다.
+
 ## 다시 검토할 시점
 - ES multi-cluster (read replica) 도입 시 readiness 판정을 "primary down + replica also
   down" 으로 확장.
