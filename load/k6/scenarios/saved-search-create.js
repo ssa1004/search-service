@@ -1,5 +1,9 @@
 // 저장 검색 (Saved Search) 등록 write throughput 시나리오.
 //
+// (미구현/aspirational): SaveSearchUseCase/SaveSearchService 는 있으나 현재 빌드에는
+//    REST 컨트롤러로 노출돼 있지 않다. 따라서 이 시나리오는 현재 서비스에 대고 돌리면
+//    404 가 난다 — saved-search REST 노출이 추가되면 동작하는 설계 의도용 스크립트다.
+//
 // POST /api/v1/saved-searches — 사용자가 검색 조건을 저장. 5분 주기 스케줄러가 cursor
 // 이후 신규 매치를 평가해 Kafka `search.alert.fired` 로 발행하는 경로의 진입점.
 // 검색 read 경로와 달리 SavedSearchRepository (JPA) 에 INSERT 가 들어가는 쓰기 시나리오라

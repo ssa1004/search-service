@@ -1,6 +1,6 @@
 // 단순 검색 latency 시나리오.
 //
-// GET /api/v1/search/products?q=... — 키워드만 던지는 가장 일반적인 검색 경로.
+// POST /api/v1/search/products { keyword } — 키워드만 던지는 가장 일반적인 검색 경로.
 // filter / facet / sort 가 모두 비어 있어 ES 비용은 bm25 + function_score (인기도 + 신상품
 // decay) 만 들어간다. boost rule 의 cache 동작과 query analyzer (nori) 의 base latency 를
 // 본다.
@@ -38,10 +38,11 @@ export const options = {
 
 export default function () {
   const q = randomQuery();
-  const url = `${BASE_URL}/api/v1/search/products?q=${encodeURIComponent(q)}`;
+  const url = `${BASE_URL}/api/v1/search/products`;
+  const body = JSON.stringify({ keyword: q, page: 0, size: 20 });
 
-  const res = http.get(url, {
-    headers: authHeader(),
+  const res = http.post(url, body, {
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
     tags: { name: 'search-simple' },
   });
 

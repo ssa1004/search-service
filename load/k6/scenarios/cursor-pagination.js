@@ -1,6 +1,10 @@
 // cursor 기반 페이지네이션의 decoding 안정성 검증.
 //
-// GET /api/v1/search/products?q=...&cursor=... 로 한 검색 결과를 cursor 가 빌 때까지 끝까지
+// (미구현/aspirational): 현재 검색은 POST /api/v1/search/products + page/size 방식이고
+//    응답에 next_cursor 가 없다(cursor/search_after 미구현). 아래는 cursor 토큰 페이지네이션을
+//    "가정"한 설계 의도용 시나리오로, 현재 빌드에 대고 돌리면 cursor 가 동작하지 않는다.
+//
+// (가정) GET /api/v1/search/products?q=...&cursor=... 로 한 검색 결과를 cursor 가 빌 때까지 끝까지
 // 따라간다. ES 의 `search_after` 를 application 단에서 base64 cursor token 으로 감싼다고
 // 가정 — 매 페이지마다 next_cursor 를 받고 다음 호출에 그대로 넣는다.
 //

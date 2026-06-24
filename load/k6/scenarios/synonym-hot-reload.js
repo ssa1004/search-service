@@ -49,9 +49,10 @@ export const options = {
 
 function searchOnce() {
   const q = randomQuery();
-  const url = `${BASE_URL}/api/v1/search/products?q=${encodeURIComponent(q)}`;
-  return http.get(url, {
-    headers: authHeader(),
+  const url = `${BASE_URL}/api/v1/search/products`;
+  const body = JSON.stringify({ keyword: q, page: 0, size: 20 });
+  return http.post(url, body, {
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
     tags: { name: 'synonym-hot-reload-search' },
   });
 }
