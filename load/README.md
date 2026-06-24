@@ -1,7 +1,7 @@
 # Load test (k6)
 
-search-service 의 5 가지 부하 시나리오. ES + nori + function_score boost + 동의어
-런타임 reload 구조에 대해 단순 RPS 가 아닌 *검색 특유의 비용* 을 본다 — query DSL,
+search-service 의 5 가지 부하 시나리오. ES + nori + function_score boost(= 글자 매칭 점수에 인기·신상 같은 추가 점수를 곱해 더 좋은 상품을 위로 올리는 방식) + 동의어
+런타임 reload(= 검색을 멈추지 않고 운영 중에 동의어 사전을 바꿔 즉시 반영하는 것) 구조에 대해 단순 RPS 가 아닌 *검색 특유의 비용* 을 본다 — query DSL,
 facet aggregation, cursor decode 안정성, 동의어 hot-reload 직후 cache invalidation 비용.
 
 ## 디렉토리
