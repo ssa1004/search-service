@@ -92,7 +92,7 @@ k6 run load/k6/scenarios/search-with-filters.js
 
 ### 3) saved-search-create — write throughput
 
-`POST /api/v1/saved-searches` (계획/미구현 — REST 미노출). 현재 `SaveSearchService` 와
+`POST /api/v1/saved-searches` (REST 미노출 — 서비스는 구현됨). 현재 `SaveSearchService` 와
 `SavedSearchRepository` (JPA) 등 application/adapter 계층은 존재하지만 이를 노출하는
 컨트롤러가 아직 와이어링되지 않아, 이 시나리오는 read 경로와 달리 INSERT 가 들어가는
 쓰기 경로를 *상정한* 모델이다. DB connection pool / 트랜잭션 비용이 두드러지는 지점으로,
