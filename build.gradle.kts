@@ -1,14 +1,14 @@
 // 루트 빌드 — 공통 conventions. 각 모듈이 상속받는 공유 설정.
 plugins {
     java
-    id("org.springframework.boot") version "3.5.15" apply false
+    id("org.springframework.boot") version "4.1.0" apply false
     id("io.spring.dependency-management") version "1.1.7" apply false
     // Kotlin 은 도메인 모듈만 사용 — 루트에서는 버전만 고정하고 apply 는 모듈이 직접.
-    kotlin("jvm") version "2.1.0" apply false
+    kotlin("jvm") version "2.4.0" apply false
     // OpenAPI spec build-time export — 실제 적용은 bootstrap 모듈.
     id("org.springdoc.openapi-gradle-plugin") version "1.9.0" apply false
     // 코드 커버리지 — Kotlin 코드베이스라 JaCoCo 대신 Kover. 루트에서 aggregate.
-    id("org.jetbrains.kotlinx.kover") version "0.9.1"
+    id("org.jetbrains.kotlinx.kover") version "0.9.8"
 }
 
 allprojects {
@@ -34,7 +34,7 @@ subprojects {
 
     the<io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension>().apply {
         imports {
-            mavenBom("org.springframework.boot:spring-boot-dependencies:3.5.15")
+            mavenBom("org.springframework.boot:spring-boot-dependencies:4.1.0")
         }
 
         // 보안 게이트(Trivy image scan, HIGH/CRITICAL, ignore-unfixed) 통과용 transitive 버전 상향.
@@ -47,13 +47,13 @@ subprojects {
         dependencies {
             // CVE-2025-48924 — commons-lang3 ClassUtils.getClass 무한 재귀(StackOverflow) DoS.
             //   경로: springdoc → swagger-core-jakarta:2.2.22 → commons-lang3 (BOM 이 3.17.0 고정).
-            dependency("org.apache.commons:commons-lang3:3.18.0")
+            dependency("org.apache.commons:commons-lang3:3.20.0")
             // CVE-2026-45292 — opentelemetry baggage 파싱 unbounded memory/CPU DoS.
             //   경로: elasticsearch-java → elasticsearch-rest-client → opentelemetry-api
             //   (BOM 이 opentelemetry-bom 1.49.0 import). api/context 는 동일 릴리스 라인이라
             //   짝을 맞춰 1.62.0 으로 올린다.
-            dependency("io.opentelemetry:opentelemetry-api:1.62.0")
-            dependency("io.opentelemetry:opentelemetry-context:1.62.0")
+            dependency("io.opentelemetry:opentelemetry-api:1.63.0")
+            dependency("io.opentelemetry:opentelemetry-context:1.63.0")
         }
     }
 
