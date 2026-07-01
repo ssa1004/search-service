@@ -5,7 +5,7 @@
 plugins {
     java
     kotlin("jvm")
-    kotlin("plugin.spring") version "2.1.0"
+    kotlin("plugin.spring") version "2.4.0"
     id("org.springframework.boot")
     id("io.spring.dependency-management")
     // OpenAPI spec build-time export — generateOpenApiDocs 가 앱을 부팅한 뒤
@@ -31,16 +31,16 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
 
     // ES Java Client 빈 등록 (ElasticsearchConfig 가 직접 RestClient/ElasticsearchClient 참조).
-    implementation("co.elastic.clients:elasticsearch-java:8.15.5")
+    implementation("co.elastic.clients:elasticsearch-java:9.4.3")
     implementation("com.fasterxml.jackson.core:jackson-databind")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
 
     // Resilience4j — 빈 customizer (CB / Retry / Bulkhead).
-    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.2.0")
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.4.0")
 
     // ShedLock — bootstrap 에서 LockProvider 빈 등록.
-    implementation("net.javacrumbs.shedlock:shedlock-spring:5.16.0")
-    implementation("net.javacrumbs.shedlock:shedlock-provider-jdbc-template:5.16.0")
+    implementation("net.javacrumbs.shedlock:shedlock-spring:7.7.0")
+    implementation("net.javacrumbs.shedlock:shedlock-provider-jdbc-template:7.7.0")
 
     // Kafka — KafkaConfig 가 ConsumerFactory / ContainerFactory 빈을 직접 정의.
     implementation("org.springframework.kafka:spring-kafka")
@@ -48,7 +48,7 @@ dependencies {
     // OpenAPI models — OpenApiConfig 가 io.swagger.v3.oas.models 로 spec metadata(info/server)
     // 를 결정적으로 고정한다. adapter-in 의 springdoc 의존은 implementation 이라 여기까지
     // 전이되지 않으므로 명시.
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
 
     // Actuator + Prometheus.
     implementation("org.springframework.boot:spring-boot-starter-actuator")
