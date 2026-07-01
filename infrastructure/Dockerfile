@@ -1,7 +1,7 @@
 # Multi-stage — JDK 21 build + JRE 21 runtime, non-root, ZGC.
 
 # ── build stage ──
-FROM eclipse-temurin:21-jdk-jammy AS build
+FROM eclipse-temurin:25-jdk-jammy AS build
 WORKDIR /workspace
 COPY gradlew settings.gradle.kts build.gradle.kts gradle.properties ./
 COPY gradle ./gradle
@@ -14,7 +14,7 @@ COPY e2e-tests ./e2e-tests
 RUN ./gradlew :search-bootstrap:bootJar -x test --no-daemon
 
 # ── runtime stage ──
-FROM eclipse-temurin:21-jre-jammy
+FROM eclipse-temurin:25-jre-jammy
 
 # OCI image labels — provenance/표준 메타데이터 (ghcr 패키지 페이지 + 스캐너가 읽음).
 LABEL org.opencontainers.image.title="search-service" \
